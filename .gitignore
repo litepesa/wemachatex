@@ -1,0 +1,113 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where third-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Ignore .fetch files in case you like to edit your project deps locally.
+/.fetch
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Temporary files, for example, from tests.
+/tmp/
+
+# ========================================
+# SENSITIVE FILES - NEVER COMMIT THESE
+# ========================================
+
+# Environment variables with secrets
+.env
+.env.local
+.env.*.local
+
+# Firebase service account credentials
+*firebase*adminsdk*.json
+serviceAccount*.json
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Database dumps and backups
+*.sql
+*.dump
+
+# ========================================
+# EDITOR & IDE
+# ========================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# IntelliJ IDEA / RubyMine / WebStorm
+.idea/
+*.iml
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ========================================
+# OPERATING SYSTEM
+# ========================================
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# ========================================
+# PHOENIX SPECIFIC
+# ========================================
+
+# Phoenix static assets
+/apps/*/priv/static/assets/
+
+# Phoenix LiveView uploads
+/apps/*/priv/uploads/
+
+# npm dependencies (if using assets)
+/apps/*/assets/node_modules/
+
+# ========================================
+# LOGS
+# ========================================
+
+# Application logs
+*.log
+logs/
+log/
