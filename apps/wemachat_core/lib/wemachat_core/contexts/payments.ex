@@ -330,8 +330,13 @@ defmodule WemachatCore.Contexts.Payments do
   end
 
   defp add_coins_to_wallet(transaction) do
-    # Calculate coins based on amount (e.g., KES 10 = 10 coins, KES 100 = 100 coins)
-    coins_to_add = Decimal.to_integer(transaction.amount)
+    # Calculate coins based on amount with conversion rate: 1 coin = 1.5 KES
+    # Example: KES 75 = 50 coins, KES 150 = 100 coins
+    coins_to_add =
+      transaction.amount
+      |> Decimal.div(Decimal.new("1.5"))
+      |> Decimal.round(0)
+      |> Decimal.to_integer()
 
     case Wallets.credit_wallet(transaction.user_id, coins_to_add, "purchase", %{
            "description" => "M-Pesa wallet top-up",
@@ -344,6 +349,20 @@ defmodule WemachatCore.Contexts.Payments do
         Logger.info(
           "Added #{coins_to_add} coins to wallet for user #{transaction.user_id}: #{transaction.mpesa_receipt_number}"
         )
+
+        # If this is user's first wallet top-up, mark them as paid (activation)
+        user = get_user(transaction.user_id)
+
+        if user && !user.has_paid do
+          Logger.info("First-time wallet top-up for user #{transaction.user_id} - marking as activated")
+
+          mark_user_as_paid(
+            transaction.user_id,
+            transaction.mpesa_receipt_number,
+            transaction.amount,
+            transaction.phone_number
+          )
+        end
 
         {:ok, %{transaction: transaction, wallet: wallet}}
 

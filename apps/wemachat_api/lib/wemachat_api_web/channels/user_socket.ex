@@ -4,6 +4,7 @@ defmodule WemachatApiWeb.UserSocket do
   # Channels
   channel "chat:*", WemachatApiWeb.ChatChannel
   channel "call:*", WemachatApiWeb.CallChannel
+  channel "group:*", WemachatApiWeb.GroupChannel
 
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do

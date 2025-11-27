@@ -38,38 +38,36 @@ defmodule WemachatCore.Contexts.Videos do
 
   @doc """
   Gets a single video by ID.
-  Returns nil if video doesn't exist OR is expired.
+  Returns nil if video doesn't exist.
+  Note: Videos now stay on platform forever (no expiry).
   """
   def get_video(id) do
-    now = DateTime.utc_now()
-
     Video
-    |> where([v], v.id == ^id and v.expires_at > ^now and v.is_active == true)
+    |> where([v], v.id == ^id and v.is_active == true)
     |> Repo.one()
   end
 
   @doc """
-  Gets a single video by ID, raises if not found or expired.
+  Gets a single video by ID, raises if not found.
+  Note: Videos now stay on platform forever (no expiry).
   """
   def get_video!(id) do
-    now = DateTime.utc_now()
-
     Video
-    |> where([v], v.id == ^id and v.expires_at > ^now and v.is_active == true)
+    |> where([v], v.id == ^id and v.is_active == true)
     |> Repo.one!()
   end
 
   @doc """
-  Lists videos from a user (only non-expired, active videos).
+  Lists videos from a user (only active videos).
+  Note: Videos now stay on platform forever (no expiry).
   """
   def list_user_videos(user_id, opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
-    now = DateTime.utc_now()
 
     Video
     |> where([v], v.user_id == ^user_id)
-    |> where([v], v.expires_at > ^now and v.is_active == true)
+    |> where([v], v.is_active == true)
     |> order_by([v], desc: v.inserted_at)
     |> limit(^per_page)
     |> offset(^((page - 1) * per_page))
@@ -77,16 +75,16 @@ defmodule WemachatCore.Contexts.Videos do
   end
 
   @doc """
-  Gets feed of videos (TikTok-style, only non-expired).
+  Gets feed of videos (TikTok-style).
   Ordered by newest first.
+  Note: Videos now stay on platform forever (no expiry).
   """
   def get_feed(opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
-    now = DateTime.utc_now()
 
     Video
-    |> where([v], v.expires_at > ^now and v.is_active == true)
+    |> where([v], v.is_active == true)
     |> order_by([v], desc: v.inserted_at)
     |> limit(^per_page)
     |> offset(^((page - 1) * per_page))
@@ -94,16 +92,16 @@ defmodule WemachatCore.Contexts.Videos do
   end
 
   @doc """
-  Gets discover feed (trending non-expired videos).
+  Gets discover feed (trending videos).
   Ordered by engagement (views + likes).
+  Note: Videos now stay on platform forever (no expiry).
   """
   def get_discover_feed(opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
-    now = DateTime.utc_now()
 
     Video
-    |> where([v], v.expires_at > ^now and v.is_active == true)
+    |> where([v], v.is_active == true)
     |> order_by([v], desc: v.views + v.likes)
     |> limit(^per_page)
     |> offset(^((page - 1) * per_page))
@@ -111,16 +109,16 @@ defmodule WemachatCore.Contexts.Videos do
   end
 
   @doc """
-  Search videos by caption (only non-expired).
+  Search videos by caption.
+  Note: Videos now stay on platform forever (no expiry).
   """
   def search_videos(query, opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
-    now = DateTime.utc_now()
     search_query = "%#{query}%"
 
     Video
-    |> where([v], v.expires_at > ^now and v.is_active == true)
+    |> where([v], v.is_active == true)
     |> where([v], ilike(v.caption, ^search_query))
     |> order_by([v], desc: v.views)
     |> limit(^per_page)

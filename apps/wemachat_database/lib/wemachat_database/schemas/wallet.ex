@@ -16,6 +16,9 @@ defmodule WemachatDatabase.Schemas.Wallet do
 
   schema "wallets" do
     field :user_id, :string
+    field :username, :string
+    field :phone_number, :string
+    field :mpesa_number, :string
     field :balance, :integer, default: 0
     field :total_earned, :integer, default: 0
     field :total_spent, :integer, default: 0
@@ -31,7 +34,7 @@ defmodule WemachatDatabase.Schemas.Wallet do
   """
   def create_changeset(wallet, attrs) do
     wallet
-    |> cast(attrs, [:user_id, :balance, :total_earned, :total_spent])
+    |> cast(attrs, [:user_id, :username, :phone_number, :mpesa_number, :balance, :total_earned, :total_spent])
     |> validate_required([:user_id])
     |> validate_number(:balance, greater_than_or_equal_to: 0)
     |> validate_number(:total_earned, greater_than_or_equal_to: 0)

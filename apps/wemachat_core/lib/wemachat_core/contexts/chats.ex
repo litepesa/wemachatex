@@ -15,19 +15,39 @@ defmodule WemachatCore.Contexts.Chats do
   Users are automatically ordered canonically.
   """
   def get_or_create_chat(user1_id, user2_id) do
-    # Order users canonically
+    IO.puts("🔧 get_or_create_chat called with: user1_id=#{user1_id}, user2_id=#{user2_id}")
+
+    # Order users canonically using case-insensitive comparison
+    # This matches PostgreSQL's collation behavior
     {ordered_user1, ordered_user2} =
-      if user1_id < user2_id, do: {user1_id, user2_id}, else: {user2_id, user1_id}
+      if String.downcase(user1_id) < String.downcase(user2_id) do
+        {user1_id, user2_id}
+      else
+        {user2_id, user1_id}
+      end
+
+    IO.puts("🔧 Ordered: user1_id=#{ordered_user1}, user2_id=#{ordered_user2}")
 
     case Repo.get_by(Chat, user1_id: ordered_user1, user2_id: ordered_user2) do
       nil ->
+        IO.puts("🔧 No existing chat found, creating new one...")
         attrs = %{user1_id: ordered_user1, user2_id: ordered_user2}
 
-        %Chat{}
+        result = %Chat{}
         |> Chat.create_changeset(attrs)
         |> Repo.insert()
 
+        case result do
+          {:ok, chat} ->
+            IO.puts("✅ Chat created successfully: #{chat.id}")
+            {:ok, chat}
+          {:error, changeset} ->
+            IO.puts("❌ Failed to create chat: #{inspect(changeset.errors)}")
+            {:error, changeset}
+        end
+
       chat ->
+        IO.puts("✅ Found existing chat: #{chat.id}")
         {:ok, chat}
     end
   end

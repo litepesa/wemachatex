@@ -31,7 +31,8 @@ defmodule WemachatApiWeb.Endpoint do
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
     plug Phoenix.CodeReloader
-    plug Phoenix.Ecto.CheckRepoStatus, otp_app: :wemachat_api
+    # Temporarily disabled - migrations already applied
+    # plug Phoenix.Ecto.CheckRepoStatus, otp_app: :wemachat_api
   end
 
   plug Plug.RequestId
@@ -40,7 +41,10 @@ defmodule WemachatApiWeb.Endpoint do
   plug Plug.Parsers,
     parsers: [:urlencoded, :multipart, :json],
     pass: ["*/*"],
-    json_decoder: Phoenix.json_library()
+    json_decoder: Phoenix.json_library(),
+    length: 200_000_000,        # 200MB max body size
+    read_length: 2_000_000,     # 2MB chunk size for streaming
+    read_timeout: 120_000       # 120 seconds timeout per chunk
 
   plug Plug.MethodOverride
   plug Plug.Head

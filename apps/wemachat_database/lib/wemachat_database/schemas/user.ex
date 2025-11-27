@@ -8,7 +8,7 @@ defmodule WemachatDatabase.Schemas.User do
   schema "users" do
     # Core Profile Fields
     field :phone_number, :string
-    field :whatsapp_number, :string
+    field :mpesa_number, :string
     field :name, :string
     field :bio, :string
     field :profile_image, :string
@@ -44,6 +44,22 @@ defmodule WemachatDatabase.Schemas.User do
     field :location, :string
     field :language, :string
 
+    # Payment Fields (M-Pesa activation payment)
+    field :has_paid, :boolean, default: false
+    field :payment_date, :utc_datetime_usec
+    field :mpesa_transaction_id, :string
+    field :payment_amount, :decimal
+    field :payment_phone_number, :string
+
+    # Recommendation & Moderation Fields
+    field :is_muted, :boolean, default: false
+    field :is_shadowbanned, :boolean, default: false
+    field :reach_multiplier, :decimal, default: Decimal.new("1.0")
+    field :creator_content_type, :string
+    field :interest_type, :string
+    field :last_active_at, :utc_datetime_usec
+    field :engagement_score, :integer, default: 0
+
     # Arrays (PostgreSQL arrays)
     field :tags, {:array, :string}, default: []
     field :follower_uids, {:array, :string}, default: []
@@ -72,7 +88,7 @@ defmodule WemachatDatabase.Schemas.User do
     |> cast(attrs, [
       :id,
       :phone_number,
-      :whatsapp_number,
+      :mpesa_number,
       :name,
       :bio,
       :profile_image,
@@ -89,7 +105,7 @@ defmodule WemachatDatabase.Schemas.User do
     |> validate_length(:language, max: 100)
     |> validate_inclusion(:gender, ["male", "female"], message: "must be 'male' or 'female'")
     |> validate_phone_number(:phone_number)
-    |> validate_whatsapp_number(:whatsapp_number)
+    |> validate_mpesa_number(:mpesa_number)
     |> unique_constraint(:phone_number)
     |> put_default_timestamps()
   end
@@ -104,7 +120,7 @@ defmodule WemachatDatabase.Schemas.User do
       :bio,
       :profile_image,
       :cover_image,
-      :whatsapp_number,
+      :mpesa_number,
       :gender,
       :location,
       :language,
@@ -121,7 +137,7 @@ defmodule WemachatDatabase.Schemas.User do
     |> validate_inclusion(:gender, ["male", "female"], message: "must be 'male' or 'female'")
     |> validate_inclusion(:who_can_message, ["everyone", "contacts", "nobody"])
     |> validate_inclusion(:who_can_call, ["everyone", "contacts", "nobody"])
-    |> validate_whatsapp_number(:whatsapp_number)
+    |> validate_mpesa_number(:mpesa_number)
   end
 
   @doc """
@@ -157,6 +173,23 @@ defmodule WemachatDatabase.Schemas.User do
       :can_post,
       :is_active
     ])
+  end
+
+  @doc """
+  Changeset for admin moderation operations (recommendation system)
+  """
+  def moderation_changeset(user, attrs) do
+    user
+    |> cast(attrs, [
+      :is_muted,
+      :is_shadowbanned,
+      :reach_multiplier,
+      :creator_content_type,
+      :interest_type
+    ])
+    |> validate_number(:reach_multiplier, greater_than_or_equal_to: 0.0, less_than_or_equal_to: 2.0)
+    |> validate_inclusion(:creator_content_type, valid_content_types(), allow_nil: true)
+    |> validate_inclusion(:interest_type, valid_content_types(), allow_nil: true)
   end
 
   @doc """
@@ -198,13 +231,13 @@ defmodule WemachatDatabase.Schemas.User do
     end)
   end
 
-  defp validate_whatsapp_number(changeset, field) do
-    validate_change(changeset, field, fn _, whatsapp_number ->
+  defp validate_mpesa_number(changeset, field) do
+    validate_change(changeset, field, fn _, mpesa_number ->
       # Kenya format: 254XXXXXXXXX (12 digits)
-      if is_nil(whatsapp_number) || whatsapp_number == "" do
+      if is_nil(mpesa_number) || mpesa_number == "" do
         []
       else
-        if Regex.match?(~r/^254\d{9}$/, whatsapp_number) do
+        if Regex.match?(~r/^254\d{9}$/, mpesa_number) do
           []
         else
           [{field, "must be in format 254XXXXXXXXX for Kenyan numbers"}]
@@ -251,4 +284,57 @@ defmodule WemachatDatabase.Schemas.User do
   def user_type_display(%__MODULE__{is_moderator: true}), do: "Moderator"
   def user_type_display(%__MODULE__{is_verified: true}), do: "Verified User"
   def user_type_display(_), do: "User"
+
+  # Recommendation System Pattern Matching
+
+  @doc """
+  Check if user is muted (content hidden from feeds)
+  """
+  def muted?(%__MODULE__{is_muted: true}), do: true
+  def muted?(_), do: false
+
+  @doc """
+  Check if user is shadowbanned (minimal reach)
+  """
+  def shadowbanned?(%__MODULE__{is_shadowbanned: true}), do: true
+  def shadowbanned?(_), do: false
+
+  @doc """
+  Check if user has reduced reach
+  """
+  def reduced_reach?(%__MODULE__{reach_multiplier: multiplier}) when is_nil(multiplier), do: false
+  def reduced_reach?(%__MODULE__{reach_multiplier: multiplier}) do
+    Decimal.compare(multiplier, Decimal.new("1.0")) == :lt
+  end
+  def reduced_reach?(_), do: false
+
+  @doc """
+  Check if user content should be visible in recommendations
+  """
+  def visible_in_recommendations?(%__MODULE__{is_muted: true}), do: false
+  def visible_in_recommendations?(%__MODULE__{is_active: false}), do: false
+  def visible_in_recommendations?(_), do: true
+
+  @doc """
+  Valid content types for categorization
+  """
+  def valid_content_types do
+    [
+      "comedy",
+      "music",
+      "education",
+      "news",
+      "lifestyle",
+      "sports",
+      "technology",
+      "fashion",
+      "food",
+      "travel",
+      "entertainment",
+      "business",
+      "health",
+      "politics",
+      "other"
+    ]
+  end
 end

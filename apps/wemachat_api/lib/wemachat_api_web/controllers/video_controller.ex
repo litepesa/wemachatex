@@ -1,12 +1,12 @@
 defmodule WemachatApiWeb.VideoController do
   use WemachatApiWeb, :controller
 
-  alias WemachatCore.Contexts.Videos
+  alias WemachatCore.Contexts.{Videos, Recommendations}
   alias WemachatApiWeb.Plugs.FirebaseAuth
 
   # Apply Firebase auth to protected routes
   plug FirebaseAuth
-       when action not in [:index, :show, :feed, :discover, :search, :user_videos, :comments]
+       when action not in [:index, :show, :feed, :discover, :search, :user_videos, :comments, :for_you]
 
   @doc """
   POST /api/v1/videos
@@ -86,6 +86,60 @@ defmodule WemachatApiWeb.VideoController do
       page: page,
       per_page: per_page
     })
+  end
+
+  @doc """
+  GET /api/v1/videos/for-you
+  Get personalized "For You" feed with recommendations (requires auth).
+  Uses exclusion-based filtering and admin boost controls.
+  """
+  def for_you(conn, params) do
+    user_id = get_user_id_from_query_or_auth(conn, params)
+
+    if user_id do
+      page = parse_int(params["page"], 1)
+      per_page = parse_int(params["per_page"], 20)
+      include_old = parse_boolean(params["include_old"], true)
+
+      videos = Recommendations.get_for_you_feed(user_id, page: page, per_page: per_page, include_old: include_old)
+
+      conn
+      |> put_status(:ok)
+      |> json(%{
+        videos: Enum.map(videos, &format_video/1),
+        page: page,
+        per_page: per_page
+      })
+    else
+      conn
+      |> put_status(:unauthorized)
+      |> json(%{error: "Authentication required or user_id parameter missing"})
+    end
+  end
+
+  @doc """
+  POST /api/v1/videos/:id/view
+  Record that a user has viewed a video (auth required).
+  """
+  def record_view(conn, %{"id" => video_id} = params) do
+    user_id = FirebaseAuth.current_user_id(conn)
+
+    attrs = %{
+      watch_duration_seconds: parse_int(params["watch_duration_seconds"], 0),
+      completed: parse_boolean(params["completed"], false)
+    }
+
+    case Recommendations.record_video_view(user_id, video_id, attrs) do
+      {:ok, _view} ->
+        conn
+        |> put_status(:ok)
+        |> json(%{message: "View recorded successfully"})
+
+      {:error, changeset} ->
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "Failed to record view", details: format_errors(changeset)})
+    end
   end
 
   @doc """
@@ -420,4 +474,23 @@ defmodule WemachatApiWeb.VideoController do
 
   defp parse_int(value, _default) when is_integer(value), do: value
   defp parse_int(_, default), do: default
+
+  defp parse_boolean(value, default) when is_binary(value) do
+    case String.downcase(value) do
+      "true" -> true
+      "false" -> false
+      "1" -> true
+      "0" -> false
+      _ -> default
+    end
+  end
+
+  defp parse_boolean(value, _default) when is_boolean(value), do: value
+  defp parse_boolean(_, default), do: default
+
+  # Get user ID from query parameter or Firebase auth
+  # This allows public endpoints to be personalized if user_id is provided
+  defp get_user_id_from_query_or_auth(conn, params) do
+    params["user_id"] || FirebaseAuth.current_user_id(conn)
+  end
 end

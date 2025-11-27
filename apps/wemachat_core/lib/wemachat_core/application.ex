@@ -9,7 +9,9 @@ defmodule WemachatCore.Application do
   def start(_type, _args) do
     children = [
       # Background job to cleanup expired videos (runs every hour)
-      WemachatCore.Jobs.VideoCleanup
+      WemachatCore.Jobs.VideoCleanup,
+      # Background job to cleanup expired statuses (runs every hour)
+      WemachatCore.Jobs.StatusCleanup
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

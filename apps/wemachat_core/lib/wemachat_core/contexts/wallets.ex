@@ -6,7 +6,7 @@ defmodule WemachatCore.Contexts.Wallets do
 
   import Ecto.Query, warn: false
   alias WemachatDatabase.Repo
-  alias WemachatDatabase.Schemas.{Wallet, Transaction}
+  alias WemachatDatabase.Schemas.{Wallet, Transaction, User}
 
   ## WALLETS
 
@@ -16,8 +16,18 @@ defmodule WemachatCore.Contexts.Wallets do
   def get_or_create_wallet(user_id) do
     case Repo.get_by(Wallet, user_id: user_id) do
       nil ->
+        # Fetch user data to populate wallet fields
+        user = Repo.get(User, user_id)
+
+        wallet_attrs = %{
+          user_id: user_id,
+          username: if(user, do: user.name, else: nil),
+          phone_number: if(user, do: user.phone_number, else: nil),
+          mpesa_number: if(user, do: user.mpesa_number, else: nil)
+        }
+
         %Wallet{}
-        |> Wallet.create_changeset(%{user_id: user_id})
+        |> Wallet.create_changeset(wallet_attrs)
         |> Repo.insert()
 
       wallet ->
