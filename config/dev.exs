@@ -38,21 +38,35 @@ end
 # Database Configuration (Development)
 # ========================================
 
+# Parse DATABASE_URL for connection parameters
+database_url = System.get_env("DATABASE_URL") || "postgres://postgres:postgres@localhost:5432/wemachat_dev"
+
+{db_user, db_password, db_host, db_port, db_name} =
+  case URI.parse(database_url) do
+    %URI{userinfo: userinfo, host: host, port: port, path: path} when is_binary(userinfo) and is_binary(host) ->
+      [user, password] = String.split(userinfo, ":")
+      # Remove leading slash and any query parameters from path
+      db_name = path
+        |> String.trim_leading("/")
+        |> String.split("?")
+        |> List.first()
+      db_port = port || 5432
+      {user, password, host, db_port, db_name}
+    _ ->
+      raise "Invalid DATABASE_URL format. Expected: postgres://user:password@host:port/database"
+  end
+
 # Configure the shared database repository
-# IMPORTANT: Load .env file or set environment variables before running
 config :wemachat_database, WemachatDatabase.Repo,
-  username: System.get_env("DB_USER") || "postgres",
-  password: System.get_env("DB_PASSWORD") || "postgres",
-  hostname: System.get_env("DB_HOST") || "localhost",
-  database: System.get_env("DB_NAME") || "wemachat_dev",
+  username: db_user,
+  password: db_password,
+  hostname: db_host,
+  database: db_name,
+  port: db_port,
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: String.to_integer(System.get_env("DB_POOL_SIZE") || "3"),
-  port: String.to_integer(System.get_env("DB_PORT") || "5432"),
-  ssl: [
-    verify: :verify_none,  # This bypasses certificate verification
-    server_name_indication: :disable
-  ]
+  ssl: false
 
 # ========================================
 # API Endpoint Configuration (Development)

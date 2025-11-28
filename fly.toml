@@ -1,0 +1,35 @@
+# fly.toml app configuration file generated for wemachatex on 2025-11-28T07:25:47+03:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'wemachatex'
+primary_region = 'sin'
+
+[build]
+  dockerfile = 'Dockerfile'
+
+[env]
+  PORT = '8080'
+  PHX_SERVER = 'true'
+  PHX_HOST = 'wemachatex.fly.dev'
+  FIREBASE_PROJECT_ID = 'texgb-50a98'
+  R2_ACCOUNT_ID = '05e37d8d5b65e5913210298fe08aa2e5'
+  R2_BUCKET_NAME = 'weibaomedia'
+  R2_PUBLIC_URL = 'https://pub-5e8ab62547db4f58851382161d280c19.r2.dev'
+  MPESA_ENVIRONMENT = 'sandbox'
+  MPESA_SHORTCODE = '4146499'
+  ALLOWED_ORIGINS = '*'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
