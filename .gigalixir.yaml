@@ -1,0 +1,23 @@
+# Gigalixir configuration
+version: 1
+
+# Build configuration
+build:
+  mix_env: prod
+
+# Release configuration  
+release:
+  version: 1.0.0
+  
+# Health check
+health_check:
+  path: "/api/v1/health"
+  interval: 30
+  timeout: 5
+  initial_delay: 30
+```
+
+## 6. Create `Procfile` (in project root)
+```
+web: mix phx.server
+release: mix ecto.migrate

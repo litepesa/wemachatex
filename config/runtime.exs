@@ -18,39 +18,6 @@ if config_env() == :dev do
 end
 
 # ========================================
-# Database Configuration - FOOLPROOF METHOD
-# ========================================
-# Use the built-in Ecto.Repo.Supervisor.init/2 which handles DATABASE_URL automatically
-# This is the standard way Ecto handles database URLs in production
-
-database_url = System.get_env("DATABASE_URL")
-
-cond do
-  database_url ->
-    # Production: Use DATABASE_URL directly - Ecto handles parsing internally
-    config :wemachat_database, WemachatDatabase.Repo,
-      url: database_url,
-      ssl: true,
-      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
-      queue_target: 5000,
-      queue_interval: 1000
-
-  config_env() == :dev ->
-    # Development: Use individual environment variables
-    config :wemachat_database, WemachatDatabase.Repo,
-      username: System.get_env("DB_USER") || "postgres",
-      password: System.get_env("DB_PASSWORD") || "postgres",
-      hostname: System.get_env("DB_HOST") || "localhost",
-      port: String.to_integer(System.get_env("DB_PORT") || "5432"),
-      database: System.get_env("DB_NAME") || "wemachat_dev",
-      ssl: false,
-      pool_size: String.to_integer(System.get_env("POOL_SIZE") || "3")
-
-  true ->
-    raise "DATABASE_URL environment variable is required in production"
-end
-
-# ========================================
 # Firebase Configuration
 # ========================================
 config :wemachat_api, :firebase,
@@ -90,6 +57,7 @@ config :wemachat_core, :mpesa,
 # ========================================
 # PHX_SERVER Control
 # ========================================
+
 if System.get_env("PHX_SERVER") do
   config :wemachat_api, WemachatApiWeb.Endpoint, server: true
 end
@@ -97,7 +65,44 @@ end
 # ========================================
 # Production Configuration
 # ========================================
+
 if config_env() == :prod do
+  # ========================================
+  # Database Configuration
+  # ========================================
+
+  database_url =
+    System.get_env("DATABASE_URL") ||
+      raise """
+      environment variable DATABASE_URL is missing.
+      For example: postgresql://USER:PASS@HOST:PORT/DATABASE
+      """
+
+  # Parse the DATABASE_URL into individual components
+  # Format: postgresql://user:password@host:port/database
+  # Gigalixir provides DATABASE_URL automatically
+  %{
+    userinfo: userinfo,
+    host: host,
+    port: port,
+    path: "/" <> database
+  } = URI.parse(database_url)
+
+  [username, password] = String.split(userinfo, ":")
+
+  config :wemachat_database, WemachatDatabase.Repo,
+    username: username,
+    password: password,
+    database: database,
+    hostname: host,
+    port: port || 5432,
+    pool_size: String.to_integer(System.get_env("POOL_SIZE") || "2"),
+    ssl: true
+
+  # ========================================
+  # Secret Key Base
+  # ========================================
+
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||
       raise """
@@ -105,13 +110,21 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "wemachatex.fly.dev"
-  port = String.to_integer(System.get_env("PORT") || "8080")
+  # ========================================
+  # Phoenix Endpoint Configuration
+  # ========================================
 
-  config :wemachat_api, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  # Gigalixir provides APP_NAME environment variable
+  app_name = System.get_env("APP_NAME") || "wemachatex"
+  host = System.get_env("PHX_HOST") || "#{app_name}.gigalixirapp.com"
+  port = String.to_integer(System.get_env("PORT") || "4000")
 
   config :wemachat_api, WemachatApiWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
-    http: [ip: {0, 0, 0, 0, 0, 0, 0, 0}, port: port],
-    secret_key_base: secret_key_base
+    http: [
+      port: port,
+      transport_options: [socket_opts: [:inet6]]
+    ],
+    secret_key_base: secret_key_base,
+    server: true
 end

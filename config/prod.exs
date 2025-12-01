@@ -1,6 +1,18 @@
 import Config
 
 # ========================================
+# Production Configuration
+# ========================================
+
+# For production, don't forget to configure the url host
+# to something meaningful, Phoenix uses this information
+# when generating URLs.
+
+config :wemachat_api, WemachatApiWeb.Endpoint,
+  cache_static_manifest: "priv/static/cache_manifest.json",
+  server: true
+
+# ========================================
 # Logger Configuration (Production)
 # ========================================
 

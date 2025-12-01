@@ -17,18 +17,10 @@ import Config
 config :wemachat_database,
   ecto_repos: [WemachatDatabase.Repo]
 
-# Configure the shared database repository with defaults
-# These will be overridden at runtime by runtime.exs
+# Configure the shared database repository
 config :wemachat_database, WemachatDatabase.Repo,
   migration_primary_key: [type: :binary_id],
-  migration_timestamps: [type: :utc_datetime],
-  # Provide sensible defaults that will be overridden
-  username: "postgres",
-  password: "postgres",
-  hostname: "localhost",
-  database: "wemachat_dev",
-  port: 5432,
-  pool_size: 10
+  migration_timestamps: [type: :utc_datetime]
 
 # ========================================
 # API Configuration (wemachat_api)
