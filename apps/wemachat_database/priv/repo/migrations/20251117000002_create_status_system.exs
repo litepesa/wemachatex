@@ -4,7 +4,7 @@ defmodule WemachatDatabase.Repo.Migrations.CreateStatusSystem do
   def up do
     # Create statuses table
     create table(:statuses, primary_key: false) do
-      add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
+      add :id, :uuid, primary_key: true
       add :user_id, :string, null: false
       add :content, :text
       add :media_url, :string
@@ -32,7 +32,7 @@ defmodule WemachatDatabase.Repo.Migrations.CreateStatusSystem do
 
     # Create status_views table
     create table(:status_views, primary_key: false) do
-      add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
+      add :id, :uuid, primary_key: true
       add :status_id, references(:statuses, type: :uuid, on_delete: :delete_all), null: false
       add :user_id, :string, null: false
       add :viewed_at, :utc_datetime_usec, null: false
@@ -47,7 +47,7 @@ defmodule WemachatDatabase.Repo.Migrations.CreateStatusSystem do
 
     # Create status_likes table
     create table(:status_likes, primary_key: false) do
-      add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
+      add :id, :uuid, primary_key: true
       add :status_id, references(:statuses, type: :uuid, on_delete: :delete_all), null: false
       add :user_id, :string, null: false
 

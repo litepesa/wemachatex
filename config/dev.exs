@@ -37,22 +37,9 @@ end
 # ========================================
 # Database Configuration (Development)
 # ========================================
-
-# Configure the shared database repository
-# IMPORTANT: Load .env file or set environment variables before running
-config :wemachat_database, WemachatDatabase.Repo,
-  username: System.get_env("DB_USER") || "postgres",
-  password: System.get_env("DB_PASSWORD") || "postgres",
-  hostname: System.get_env("DB_HOST") || "localhost",
-  database: System.get_env("DB_NAME") || "wemachat_dev",
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true,
-  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE") || "3"),
-  port: String.to_integer(System.get_env("DB_PORT") || "5432"),
-  ssl: [
-    verify: :verify_none,  # This bypasses certificate verification
-    server_name_indication: :disable
-  ]
+# NOTE: Database configuration has been moved to runtime.exs
+# This ensures env vars are properly loaded at runtime
+# The configuration now matches PgAdmin's connection format exactly
 
 # ========================================
 # API Endpoint Configuration (Development)
@@ -90,6 +77,3 @@ config :phoenix, :stacktrace_depth, 20
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
-
-# Disable Swoosh API client as it is only required for production adapters.
-# config :swoosh, :api_client, false

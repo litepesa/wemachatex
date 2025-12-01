@@ -13,6 +13,9 @@ defmodule WemachatApiWeb.Router do
   scope "/api/v1", WemachatApiWeb do
     pipe_through :api
 
+    # Health check endpoint for Fly.io (must be public, no auth)
+    get "/health", HealthController, :index
+
     # Auth routes (authenticated) - Alias for user sync
     post "/auth/sync", UserController, :sync
 

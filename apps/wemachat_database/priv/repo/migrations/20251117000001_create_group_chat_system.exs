@@ -4,7 +4,7 @@ defmodule WemachatDatabase.Repo.Migrations.CreateGroupChatSystem do
   def up do
     # Create groups table
     create table(:groups, primary_key: false) do
-      add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
+      add :id, :uuid, primary_key: true
       add :name, :string, null: false
       add :description, :text
       add :group_image_url, :string
@@ -20,7 +20,7 @@ defmodule WemachatDatabase.Repo.Migrations.CreateGroupChatSystem do
 
     # Create group_members table
     create table(:group_members, primary_key: false) do
-      add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
+      add :id, :uuid, primary_key: true
       add :group_id, references(:groups, type: :uuid, on_delete: :delete_all), null: false
       add :user_id, :string, null: false
       add :role, :string, default: "member", null: false  # admin, member
@@ -32,7 +32,7 @@ defmodule WemachatDatabase.Repo.Migrations.CreateGroupChatSystem do
 
     # Create group_messages table
     create table(:group_messages, primary_key: false) do
-      add :id, :uuid, primary_key: true, default: fragment("gen_random_uuid()")
+      add :id, :uuid, primary_key: true
       add :group_id, references(:groups, type: :uuid, on_delete: :delete_all), null: false
       add :sender_id, :string, null: false
       add :message_text, :text

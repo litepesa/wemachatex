@@ -17,10 +17,9 @@ import Config
 config :wemachat_database,
   ecto_repos: [WemachatDatabase.Repo]
 
-# Configure the shared database repository
-config :wemachat_database, WemachatDatabase.Repo,
-  migration_primary_key: [type: :binary_id],
-  migration_timestamps: [type: :utc_datetime]
+# IMPORTANT: DO NOT configure WemachatDatabase.Repo here!
+# All Repo configuration is done in runtime.exs to ensure
+# environment variables are properly loaded at runtime
 
 # ========================================
 # API Configuration (wemachat_api)
