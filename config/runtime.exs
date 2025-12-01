@@ -97,7 +97,12 @@ if config_env() == :prod do
     hostname: host,
     port: port || 5432,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "2"),
-    ssl: true
+    ssl: true,
+    ssl_opts: [
+      verify: :verify_none,  # IMPORTANT: Add this for Gigalixir
+      server_name_indication: :disable,
+      cacertfile: "/etc/ssl/certs/ca-certificates.crt"
+    ]
 
   # ========================================
   # Secret Key Base
@@ -122,9 +127,16 @@ if config_env() == :prod do
   config :wemachat_api, WemachatApiWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
-      port: port,
-      transport_options: [socket_opts: [:inet6]]
+      ip: {0, 0, 0, 0},
+      port: port
+      # Removed transport_options from here
+      # transport_options: [socket_opts: [:inet6]]
     ],
     secret_key_base: secret_key_base,
-    server: true
+    server: true,
+    cache_static_manifest: "priv/static/cache_manifest.json"
+
+  # Ensure no transport_options at top level (override any from other configs)
+  config :wemachat_api, WemachatApiWeb.Endpoint,
+    transport_options: nil
 end
