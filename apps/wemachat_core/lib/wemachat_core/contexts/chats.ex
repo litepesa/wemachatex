@@ -17,10 +17,10 @@ defmodule WemachatCore.Contexts.Chats do
   def get_or_create_chat(user1_id, user2_id) do
     IO.puts("🔧 get_or_create_chat called with: user1_id=#{user1_id}, user2_id=#{user2_id}")
 
-    # Order users canonically using case-insensitive comparison
-    # This matches PostgreSQL's collation behavior
+    # Order users canonically using case-sensitive comparison
+    # This matches PostgreSQL's default string comparison and the database constraint: user1_id < user2_id
     {ordered_user1, ordered_user2} =
-      if String.downcase(user1_id) < String.downcase(user2_id) do
+      if user1_id < user2_id do
         {user1_id, user2_id}
       else
         {user2_id, user1_id}

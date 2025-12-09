@@ -110,8 +110,9 @@ defmodule WemachatDatabase.Schemas.Chat do
     user1_id = get_field(changeset, :user1_id)
     user2_id = get_field(changeset, :user2_id)
 
-    # Use case-insensitive comparison to match PostgreSQL's collation behavior
-    if user1_id && user2_id && String.downcase(user1_id) > String.downcase(user2_id) do
+    # Use case-sensitive comparison to match PostgreSQL's default string comparison
+    # This matches the database constraint: user1_id < user2_id
+    if user1_id && user2_id && user1_id > user2_id do
       changeset
       |> put_change(:user1_id, user2_id)
       |> put_change(:user2_id, user1_id)
