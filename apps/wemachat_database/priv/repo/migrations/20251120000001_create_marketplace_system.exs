@@ -2,6 +2,9 @@ defmodule WemachatDatabase.Repo.Migrations.CreateMarketplaceSystem do
   use Ecto.Migration
 
   def up do
+    # Enable pg_trgm extension for fuzzy search
+    execute "CREATE EXTENSION IF NOT EXISTS pg_trgm"
+
     # Create marketplace_items table (clone of videos but NO expires_at field)
     create table(:marketplace_items, primary_key: false) do
       add :id, :binary_id, primary_key: true
@@ -66,6 +69,12 @@ defmodule WemachatDatabase.Repo.Migrations.CreateMarketplaceSystem do
     create index(:marketplace_items, [:likes, :views, :inserted_at],
       name: :marketplace_items_trending_index
     )
+
+    # Full-text search on caption (trigram for fuzzy search)
+    execute """
+    CREATE INDEX marketplace_items_caption_trgm_index ON marketplace_items
+    USING gin (caption gin_trgm_ops)
+    """
 
     # GIN index for tags array
     create index(:marketplace_items, [:tags], using: :gin)
