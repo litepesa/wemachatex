@@ -44,26 +44,51 @@ end
 
 # ========================================
 # Database Configuration (ALL ENVIRONMENTS)
-# Using PgAdmin format - individual connection params
+# Supports both DATABASE_URL and individual params
 # ========================================
 
-# Get database configuration from environment
-db_host = System.get_env("DB_HOST")
-db_user = System.get_env("DB_USER")
-db_password = System.get_env("DB_PASSWORD")
-db_name = System.get_env("DB_NAME")
-db_port = System.get_env("DB_PORT") || "5432"
-db_pool_size = System.get_env("DB_POOL_SIZE") || "10"
-db_ssl = System.get_env("DB_SSL") == "true"
+# Check for DATABASE_URL first (used by Gigalixir/Heroku)
+database_url = System.get_env("DATABASE_URL")
+
+{db_host, db_user, db_password, db_name, db_port, db_ssl} =
+  if database_url do
+    # Parse DATABASE_URL: postgresql://user:password@host:port/database
+    uri = URI.parse(database_url)
+    [username, password] = String.split(uri.userinfo || ":", ":", parts: 2)
+
+    {
+      uri.host,
+      username,
+      password,
+      String.trim_leading(uri.path || "/", "/"),
+      uri.port || 5432,
+      # Gigalixir standard tier requires SSL
+      true
+    }
+  else
+    # Fall back to individual environment variables
+    {
+      System.get_env("DB_HOST"),
+      System.get_env("DB_USER"),
+      System.get_env("DB_PASSWORD"),
+      System.get_env("DB_NAME"),
+      String.to_integer(System.get_env("DB_PORT") || "5432"),
+      System.get_env("DB_SSL") == "true"
+    }
+  end
+
+db_pool_size = String.to_integer(System.get_env("POOL_SIZE") || System.get_env("DB_POOL_SIZE") || "10")
 
 # Debug output in dev
 if config_env() == :dev do
   IO.puts("\n=== Database Configuration ===")
+  IO.puts("DATABASE_URL: #{if database_url, do: "[set]", else: "[not set]"}")
   IO.puts("DB_HOST: #{db_host}")
   IO.puts("DB_USER: #{db_user}")
   IO.puts("DB_NAME: #{db_name}")
   IO.puts("DB_PORT: #{db_port}")
   IO.puts("DB_SSL: #{db_ssl}")
+  IO.puts("POOL_SIZE: #{db_pool_size}")
   IO.puts("==============================\n")
 end
 
@@ -83,9 +108,9 @@ config :wemachat_database, WemachatDatabase.Repo,
   username: db_user,
   password: db_password,
   hostname: db_host,
-  port: String.to_integer(db_port),
+  port: (if is_integer(db_port), do: db_port, else: String.to_integer(db_port)),
   database: db_name,
-  pool_size: String.to_integer(db_pool_size),
+  pool_size: db_pool_size,
   ssl: ssl_config,
   migration_primary_key: [type: :binary_id],
   migration_timestamps: [type: :utc_datetime],
