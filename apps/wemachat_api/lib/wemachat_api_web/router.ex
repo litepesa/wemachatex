@@ -111,6 +111,29 @@ defmodule WemachatApiWeb.Router do
     post "/groups/:id/messages", GroupController, :send_message
     delete "/groups/:group_id/messages/:message_id", GroupController, :delete_message
 
+    # Group subscribe/unsubscribe (for public groups)
+    post "/groups/:id/subscribe", GroupController, :subscribe
+    delete "/groups/:id/subscribe", GroupController, :unsubscribe
+
+    # Group posts (public groups only - owner/admins can post)
+    get "/groups/:group_id/posts", GroupPostController, :index
+    post "/groups/:group_id/posts", GroupPostController, :create
+    get "/posts/:id", GroupPostController, :show
+    put "/posts/:id", GroupPostController, :update
+    delete "/posts/:id", GroupPostController, :delete
+    post "/posts/:id/like", GroupPostController, :like
+    post "/posts/:id/pin", GroupPostController, :pin
+
+    # Group post comments (threaded comments on posts)
+    get "/posts/:post_id/comments", GroupPostCommentController, :index
+    post "/posts/:post_id/comments", GroupPostCommentController, :create
+    get "/comments/:id", GroupPostCommentController, :show
+    get "/comments/:comment_id/replies", GroupPostCommentController, :list_replies
+    put "/comments/:id", GroupPostCommentController, :update
+    delete "/comments/:id", GroupPostCommentController, :delete
+    post "/comments/:id/like", GroupPostCommentController, :like
+    post "/comments/:id/pin", GroupPostCommentController, :pin
+
     # Status routes (all authenticated)
     get "/statuses", StatusController, :index
     get "/statuses/me", StatusController, :my_statuses
