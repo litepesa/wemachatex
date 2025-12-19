@@ -14,7 +14,7 @@ defmodule WemachatDatabase.Schemas.GroupMember do
   @derive {Jason.Encoder,
            except: [:__meta__, :group]}
 
-  @valid_roles ["owner", "admin", "moderator", "member", "subscriber"]
+  @valid_roles ["admin", "member"]
 
   schema "group_members" do
     field :group_id, :binary_id
@@ -53,29 +53,9 @@ defmodule WemachatDatabase.Schemas.GroupMember do
   end
 
   @doc """
-  Check if member is the owner.
-  """
-  def owner?(%__MODULE__{role: role}), do: role == "owner"
-
-  @doc """
   Check if member is an admin.
   """
   def admin?(%__MODULE__{role: role}), do: role == "admin"
-
-  @doc """
-  Check if member is a moderator.
-  """
-  def moderator?(%__MODULE__{role: role}), do: role == "moderator"
-
-  @doc """
-  Check if member can post (owner or admin for public groups).
-  """
-  def can_post?(%__MODULE__{role: role}), do: role in ["owner", "admin"]
-
-  @doc """
-  Check if member can moderate (owner, admin, or moderator).
-  """
-  def can_moderate?(%__MODULE__{role: role}), do: role in ["owner", "admin", "moderator"]
 
   @doc """
   Get list of valid roles.

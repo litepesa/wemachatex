@@ -11,29 +11,23 @@ defmodule WemachatCore.Contexts.Groups do
   ## GROUPS
 
   @doc """
-  Create a new group with specified type (private or public).
-  For private groups, creator becomes admin.
-  For public groups, creator becomes owner.
-  Group type is immutable after creation.
+  Create a new group.
+  Creator is automatically added as admin member.
   """
   def create_group(attrs) do
     Repo.transaction(fn ->
-      group_type = Map.get(attrs, :group_type, "private")
-
       # Create group
       group =
         %Group{}
         |> Group.create_changeset(attrs)
         |> Repo.insert!()
 
-      # Add creator with appropriate role based on group type
-      creator_role = if group_type == "public", do: "owner", else: "admin"
-
+      # Add creator as admin
       %GroupMember{}
       |> GroupMember.create_changeset(%{
         group_id: group.id,
         user_id: attrs.creator_id,
-        role: creator_role
+        role: "admin"
       })
       |> Repo.insert!()
 
@@ -63,27 +57,14 @@ defmodule WemachatCore.Contexts.Groups do
 
   @doc """
   List all groups for a user (ordered by last message).
-  Can be filtered by group_type using opts[:type].
   """
   def list_user_groups(user_id, opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
-    group_type = Keyword.get(opts, :type)
 
-    query =
-      Group
-      |> join(:inner, [g], gm in GroupMember, on: gm.group_id == g.id)
-      |> where([g, gm], gm.user_id == ^user_id and gm.is_active == true and g.is_active == true)
-
-    # Filter by type if specified
-    query =
-      if group_type do
-        where(query, [g], g.group_type == ^group_type)
-      else
-        query
-      end
-
-    query
+    Group
+    |> join(:inner, [g], gm in GroupMember, on: gm.group_id == g.id)
+    |> where([g, gm], gm.user_id == ^user_id and gm.is_active == true and g.is_active == true)
     |> order_by([g], desc: g.last_message_at, desc: g.inserted_at)
     |> limit(^per_page)
     |> offset(^((page - 1) * per_page))
@@ -365,131 +346,5 @@ defmodule WemachatCore.Contexts.Groups do
   """
   def leave_group(group_id, user_id) do
     remove_member(group_id, user_id)
-  end
-
-  ## NEW FUNCTIONS FOR ENHANCED GROUPS
-
-  @doc """
-  Check if a user is the owner of a group.
-  """
-  def owner?(group_id, user_id) do
-    GroupMember
-    |> where([gm],
-      gm.group_id == ^group_id and
-      gm.user_id == ^user_id and
-      gm.role == "owner" and
-      gm.is_active == true
-    )
-    |> Repo.exists?()
-  end
-
-  @doc """
-  Get the owner of a group.
-  Returns the GroupMember record of the owner, or nil if not found.
-  """
-  def get_owner(group_id) do
-    GroupMember
-    |> where([gm], gm.group_id == ^group_id and gm.role == "owner" and gm.is_active == true)
-    |> Repo.one()
-  end
-
-  @doc """
-  Check if user can post in a group.
-  Private groups: all active members can post (send messages)
-  Public groups: only owner and admins can post
-  """
-  def can_post?(group_id, user_id) do
-    case get_group(group_id) do
-      nil ->
-        false
-
-      %Group{group_type: "private"} ->
-        # In private groups, all members can post
-        member?(group_id, user_id)
-
-      %Group{group_type: "public"} ->
-        # In public groups, only owner and admins can post
-        GroupMember
-        |> where([gm],
-          gm.group_id == ^group_id and
-          gm.user_id == ^user_id and
-          gm.role in ["owner", "admin"] and
-          gm.is_active == true
-        )
-        |> Repo.exists?()
-    end
-  end
-
-  @doc """
-  Subscribe to a public group.
-  Returns {:error, :not_public_group} if group is private.
-  """
-  def subscribe_to_group(group_id, user_id) do
-    group = get_group!(group_id)
-
-    if group.group_type != "public" do
-      {:error, :not_public_group}
-    else
-      %GroupMember{}
-      |> GroupMember.create_changeset(%{
-        group_id: group_id,
-        user_id: user_id,
-        role: "subscriber"
-      })
-      |> Repo.insert()
-    end
-  end
-
-  @doc """
-  Unsubscribe from a public group.
-  """
-  def unsubscribe_from_group(group_id, user_id) do
-    remove_member(group_id, user_id)
-  end
-
-  @doc """
-  Promote a member to admin (max 16 admins enforced by database trigger).
-  Only the owner can promote to admin.
-  Returns {:error, :unauthorized} if promoter is not owner.
-  Returns {:error, :max_admins_reached} if group already has 16 admins.
-  """
-  def promote_to_admin_enhanced(group_id, user_id, promoter_id) do
-    # Only owner can promote to admin
-    unless owner?(group_id, promoter_id) do
-      {:error, :unauthorized}
-    else
-      # Check current admin count
-      group = get_group!(group_id)
-
-      if group.admin_count >= 16 do
-        {:error, :max_admins_reached}
-      else
-        # Find the member to promote
-        GroupMember
-        |> where([gm], gm.group_id == ^group_id and gm.user_id == ^user_id and gm.is_active == true)
-        |> Repo.one()
-        |> case do
-          nil ->
-            {:error, :not_found}
-
-          member ->
-            # Promote to admin
-            member
-            |> GroupMember.update_changeset(%{role: "admin"})
-            |> Repo.update()
-        end
-      end
-    end
-  end
-
-  @doc """
-  Get member role for a user in a group.
-  Returns the role string or nil if not a member.
-  """
-  def get_member_role(group_id, user_id) do
-    GroupMember
-    |> where([gm], gm.group_id == ^group_id and gm.user_id == ^user_id and gm.is_active == true)
-    |> select([gm], gm.role)
-    |> Repo.one()
   end
 end

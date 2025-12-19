@@ -9,8 +9,7 @@ defmodule WemachatApiWeb.GroupController do
   @doc """
   Create a new group.
   POST /api/v1/groups
-  Body: {name, description?, group_image_url?, group_type (private|public)}
-  Note: group_type is immutable after creation
+  Body: {name, description?, group_image_url?, creator_id}
   """
   def create(conn, params) do
     user_id = conn.assigns[:current_user_id]
@@ -19,7 +18,6 @@ defmodule WemachatApiWeb.GroupController do
       name: params["name"],
       description: params["description"],
       group_image_url: params["group_image_url"],
-      group_type: params["group_type"] || "private",
       creator_id: user_id
     }
 
@@ -64,17 +62,15 @@ defmodule WemachatApiWeb.GroupController do
   @doc """
   List all groups for the authenticated user.
   GET /api/v1/groups
-  Query params: page, per_page, type (private|public)
+  Query params: page, per_page
   """
   def index(conn, params) do
     user_id = conn.assigns[:current_user_id]
 
     opts = [
       page: Map.get(params, "page", "1") |> String.to_integer(),
-      per_page: Map.get(params, "perPage", "20") |> String.to_integer(),
-      type: Map.get(params, "type")
+      per_page: Map.get(params, "perPage", "20") |> String.to_integer()
     ]
-    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
 
     groups = Groups.list_user_groups(user_id, opts)
     json(conn, groups)
@@ -392,52 +388,6 @@ defmodule WemachatApiWeb.GroupController do
 
     groups = Groups.search_groups(query, opts)
     json(conn, groups)
-  end
-
-  @doc """
-  Subscribe to a public group.
-  POST /api/v1/groups/:id/subscribe
-  """
-  def subscribe(conn, %{"id" => group_id}) do
-    user_id = conn.assigns[:current_user_id]
-
-    case Groups.subscribe_to_group(group_id, user_id) do
-      {:ok, _member} ->
-        json(conn, %{message: "Successfully subscribed to group"})
-
-      {:error, :not_public_group} ->
-        conn
-        |> put_status(:bad_request)
-        |> json(%{error: "Can only subscribe to public groups"})
-
-      {:error, changeset} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Failed to subscribe", details: translate_errors(changeset)})
-    end
-  end
-
-  @doc """
-  Unsubscribe from a public group.
-  DELETE /api/v1/groups/:id/subscribe
-  """
-  def unsubscribe(conn, %{"id" => group_id}) do
-    user_id = conn.assigns[:current_user_id]
-
-    case Groups.unsubscribe_from_group(group_id, user_id) do
-      {:ok, _member} ->
-        json(conn, %{message: "Successfully unsubscribed from group"})
-
-      {:error, :not_found} ->
-        conn
-        |> put_status(:not_found)
-        |> json(%{error: "You are not subscribed to this group"})
-
-      {:error, _changeset} ->
-        conn
-        |> put_status(:unprocessable_entity)
-        |> json(%{error: "Failed to unsubscribe"})
-    end
   end
 
   # Helper function to translate changeset errors
