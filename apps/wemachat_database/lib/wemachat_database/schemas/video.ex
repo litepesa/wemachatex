@@ -42,6 +42,10 @@ defmodule WemachatDatabase.Schemas.Video do
     field :is_multiple_images, :boolean, default: false
     field :image_urls, {:array, :string}, default: []
 
+    # TEMPORARY: Keep this field until migration runs in production
+    # TODO: Remove after migration 20251226073854_remove_video_expiry.exs runs
+    field :expires_at, :utc_datetime_usec
+
     # Recommendation & Admin Control Fields
     field :admin_boost_score, :integer, default: 0
     field :target_counties, {:array, :string}
@@ -68,7 +72,7 @@ defmodule WemachatDatabase.Schemas.Video do
 
   @doc """
   Changeset for creating a video.
-  Videos no longer expire and stay on the platform permanently.
+  TEMPORARY: Still sets expires_at to satisfy NOT NULL constraint until migration runs.
   """
   def create_changeset(video \\ %__MODULE__{}, attrs) do
     video
@@ -90,6 +94,15 @@ defmodule WemachatDatabase.Schemas.Video do
     |> validate_required([:user_id, :user_name, :video_url])
     |> validate_length(:caption, max: 2200)
     |> validate_inclusion(:boost_tier, ["none", "basic", "standard", "advanced"])
+    |> put_expires_at_temporary()
+  end
+
+  # TEMPORARY: Set expires_at to far future (100 years) to satisfy DB constraint
+  # Will be removed after migration drops the column
+  defp put_expires_at_temporary(changeset) do
+    # Set to 100 years in future so it effectively never expires
+    expires_at = DateTime.add(DateTime.utc_now(), 100 * 365, :day)
+    put_change(changeset, :expires_at, expires_at)
   end
 
   @doc """
