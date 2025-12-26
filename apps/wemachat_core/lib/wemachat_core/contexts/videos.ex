@@ -1,12 +1,11 @@
 defmodule WemachatCore.Contexts.Videos do
   @moduledoc """
   The Videos context.
-  Handles all business logic for videos with 72-hour auto-expiry.
-
-  CRITICAL: All feed queries filter out expired videos automatically.
+  Handles all business logic for videos.
 
   NOTE: Videos are now user-based (not channel-based).
   Each video belongs directly to a user via user_id.
+  Videos no longer expire and stay on the platform permanently.
   """
 
   import Ecto.Query, warn: false
@@ -17,7 +16,8 @@ defmodule WemachatCore.Contexts.Videos do
   ## CREATE
 
   @doc """
-  Creates a video. Automatically sets expires_at to 72 hours from now.
+  Creates a video.
+  Videos no longer expire and stay on the platform permanently.
   Increments user's videos_count.
   """
   def create_video(attrs \\ %{}) do
@@ -184,21 +184,6 @@ defmodule WemachatCore.Contexts.Videos do
     end
   end
 
-  @doc """
-  Delete ALL expired videos (cleanup job).
-  This should be run periodically by a background job.
-  """
-  def delete_expired_videos do
-    now = DateTime.utc_now()
-
-    {count, _} =
-      Video
-      |> where([v], v.expires_at <= ^now)
-      |> Repo.delete_all()
-
-    {:ok, count}
-  end
-
   ## LIKES
 
   @doc """
@@ -322,24 +307,11 @@ defmodule WemachatCore.Contexts.Videos do
   ## STATISTICS
 
   @doc """
-  Count active (non-expired) videos.
+  Count active videos.
   """
   def count_active_videos do
-    now = DateTime.utc_now()
-
     Video
-    |> where([v], v.expires_at > ^now and v.is_active == true)
-    |> Repo.aggregate(:count)
-  end
-
-  @doc """
-  Count expired videos (for cleanup monitoring).
-  """
-  def count_expired_videos do
-    now = DateTime.utc_now()
-
-    Video
-    |> where([v], v.expires_at <= ^now)
+    |> where([v], v.is_active == true)
     |> Repo.aggregate(:count)
   end
 end
