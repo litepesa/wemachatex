@@ -15,7 +15,7 @@ defmodule WemachatDatabase.Schemas.Post do
            except: [:__meta__, :likes, :comments]}
 
   @visibility_options ["public", "friends", "private"]
-  @media_types ["images", "video", "mixed"]
+  @media_types ["text", "images", "video", "mixed"]
 
   schema "posts" do
     # User reference
