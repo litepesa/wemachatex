@@ -1,9 +1,7 @@
 defmodule WemachatCore.Contexts.Videos do
   @moduledoc """
   The Videos context.
-  Handles all business logic for videos with 72-hour auto-expiry.
-
-  CRITICAL: All feed queries filter out expired videos automatically.
+  Handles all business logic for videos.
 
   NOTE: Videos are now user-based (not channel-based).
   Each video belongs directly to a user via user_id.
@@ -17,7 +15,7 @@ defmodule WemachatCore.Contexts.Videos do
   ## CREATE
 
   @doc """
-  Creates a video. Automatically sets expires_at to 72 hours from now.
+  Creates a video.
   Increments user's videos_count.
   """
   def create_video(attrs \\ %{}) do
@@ -38,39 +36,33 @@ defmodule WemachatCore.Contexts.Videos do
 
   @doc """
   Gets a single video by ID.
-  Returns nil if video doesn't exist or is expired.
+  Returns nil if video doesn't exist.
   """
   def get_video(id) do
-    now = DateTime.utc_now()
-
     Video
-    |> where([v], v.id == ^id and v.is_active == true and v.expires_at > ^now)
+    |> where([v], v.id == ^id and v.is_active == true)
     |> Repo.one()
   end
 
   @doc """
   Gets a single video by ID, raises if not found.
-  Only returns non-expired videos.
   """
   def get_video!(id) do
-    now = DateTime.utc_now()
-
     Video
-    |> where([v], v.id == ^id and v.is_active == true and v.expires_at > ^now)
+    |> where([v], v.id == ^id and v.is_active == true)
     |> Repo.one!()
   end
 
   @doc """
-  Lists videos from a user (only active, non-expired videos).
+  Lists videos from a user (only active videos).
   """
   def list_user_videos(user_id, opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
-    now = DateTime.utc_now()
 
     Video
     |> where([v], v.user_id == ^user_id)
-    |> where([v], v.is_active == true and v.expires_at > ^now)
+    |> where([v], v.is_active == true)
     |> order_by([v], desc: v.inserted_at)
     |> limit(^per_page)
     |> offset(^((page - 1) * per_page))
@@ -79,15 +71,14 @@ defmodule WemachatCore.Contexts.Videos do
 
   @doc """
   Gets feed of videos (TikTok-style).
-  Ordered by newest first. Filters out expired videos.
+  Ordered by newest first.
   """
   def get_feed(opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
-    now = DateTime.utc_now()
 
     Video
-    |> where([v], v.is_active == true and v.expires_at > ^now)
+    |> where([v], v.is_active == true)
     |> order_by([v], desc: v.inserted_at)
     |> limit(^per_page)
     |> offset(^((page - 1) * per_page))
@@ -96,15 +87,14 @@ defmodule WemachatCore.Contexts.Videos do
 
   @doc """
   Gets discover feed (trending videos).
-  Ordered by engagement (views + likes). Filters out expired videos.
+  Ordered by engagement (views + likes).
   """
   def get_discover_feed(opts \\ []) do
     page = Keyword.get(opts, :page, 1)
-    now = DateTime.utc_now()
     per_page = Keyword.get(opts, :per_page, 20)
 
     Video
-    |> where([v], v.is_active == true and v.expires_at > ^now)
+    |> where([v], v.is_active == true)
     |> order_by([v], desc: v.views + v.likes)
     |> limit(^per_page)
     |> offset(^((page - 1) * per_page))
@@ -112,16 +102,15 @@ defmodule WemachatCore.Contexts.Videos do
   end
 
   @doc """
-  Search videos by caption. Filters out expired videos.
+  Search videos by caption.
   """
   def search_videos(query, opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
     search_query = "%#{query}%"
-    now = DateTime.utc_now()
 
     Video
-    |> where([v], v.is_active == true and v.expires_at > ^now)
+    |> where([v], v.is_active == true)
     |> where([v], ilike(v.caption, ^search_query))
     |> order_by([v], desc: v.views)
     |> limit(^per_page)
@@ -310,39 +299,11 @@ defmodule WemachatCore.Contexts.Videos do
   ## STATISTICS
 
   @doc """
-  Count active (non-expired) videos.
+  Count active videos.
   """
   def count_active_videos do
-    now = DateTime.utc_now()
-
     Video
-    |> where([v], v.expires_at > ^now and v.is_active == true)
+    |> where([v], v.is_active == true)
     |> Repo.aggregate(:count)
-  end
-
-  @doc """
-  Count expired videos (for cleanup monitoring).
-  """
-  def count_expired_videos do
-    now = DateTime.utc_now()
-
-    Video
-    |> where([v], v.expires_at <= ^now)
-    |> Repo.aggregate(:count)
-  end
-
-  @doc """
-  Delete ALL expired videos (cleanup job).
-  This should be run periodically by a background job.
-  """
-  def delete_expired_videos do
-    now = DateTime.utc_now()
-
-    {count, _} =
-      Video
-      |> where([v], v.expires_at <= ^now)
-      |> Repo.delete_all()
-
-    {:ok, count}
   end
 end

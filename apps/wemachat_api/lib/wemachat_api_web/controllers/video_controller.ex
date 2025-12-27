@@ -430,8 +430,6 @@ defmodule WemachatApiWeb.VideoController do
       is_multiple_images: video.is_multiple_images,
       imageUrls: video.image_urls,
       image_urls: video.image_urls,
-      expiresAt: video.expires_at,
-      expires_at: video.expires_at,
       createdAt: video.inserted_at,
       created_at: video.inserted_at,
       updatedAt: video.updated_at,

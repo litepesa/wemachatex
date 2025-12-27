@@ -42,9 +42,6 @@ defmodule WemachatDatabase.Schemas.Video do
     field :is_multiple_images, :boolean, default: false
     field :image_urls, {:array, :string}, default: []
 
-    # 72-HOUR EXPIRY (RFC 3339 with microseconds)
-    field :expires_at, :utc_datetime_usec
-
     # Recommendation & Admin Control Fields
     field :admin_boost_score, :integer, default: 0
     field :target_counties, {:array, :string}
@@ -71,7 +68,6 @@ defmodule WemachatDatabase.Schemas.Video do
 
   @doc """
   Changeset for creating a video.
-  Automatically sets expires_at to 72 hours from now.
   """
   def create_changeset(video \\ %__MODULE__{}, attrs) do
     video
@@ -93,7 +89,6 @@ defmodule WemachatDatabase.Schemas.Video do
     |> validate_required([:user_id, :user_name, :video_url])
     |> validate_length(:caption, max: 2200)
     |> validate_inclusion(:boost_tier, ["none", "basic", "standard", "advanced"])
-    |> put_expires_at()
   end
 
   @doc """
@@ -144,26 +139,11 @@ defmodule WemachatDatabase.Schemas.Video do
     |> validate_inclusion(:visibility_level, ["public", "limited", "hidden"])
   end
 
-  # Private Functions
-
-  defp put_expires_at(changeset) do
-    # Set expires_at to 72 hours from now (RFC 3339 with microseconds supported)
-    expires_at = DateTime.add(DateTime.utc_now(), 72, :hour)
-    put_change(changeset, :expires_at, expires_at)
-  end
-
   @doc """
-  Check if video is expired
-  """
-  def expired?(%__MODULE__{expires_at: expires_at}) do
-    DateTime.compare(DateTime.utc_now(), expires_at) == :gt
-  end
-
-  @doc """
-  Check if video is active (not expired and is_active = true)
+  Check if video is active (is_active = true)
   """
   def active?(%__MODULE__{} = video) do
-    video.is_active and not expired?(video)
+    video.is_active
   end
 
   # Recommendation System Pattern Matching
