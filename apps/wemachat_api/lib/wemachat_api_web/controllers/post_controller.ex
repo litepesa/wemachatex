@@ -13,18 +13,26 @@ defmodule WemachatApiWeb.PostController do
   Create a post (auth required).
   """
   def create(conn, params) do
+    require Logger
+
     user_id = FirebaseAuth.current_user_id(conn)
+    Logger.info("[POST CREATE] User ID: #{user_id}")
+    Logger.info("[POST CREATE] Raw params: #{inspect(params)}")
 
     # Transform camelCase params and add user_id
     attrs = transform_post_params(Map.put(params, "user_id", user_id))
+    Logger.info("[POST CREATE] Transformed attrs: #{inspect(attrs)}")
 
     case Moments.create_post(attrs) do
       {:ok, post} ->
+        Logger.info("[POST CREATE] Success! Post ID: #{post.id}")
         conn
         |> put_status(:created)
         |> json(format_post(post))
 
       {:error, changeset} ->
+        Logger.error("[POST CREATE] Failed! Changeset errors: #{inspect(changeset.errors)}")
+        Logger.error("[POST CREATE] Changeset: #{inspect(changeset)}")
         conn
         |> put_status(:bad_request)
         |> json(%{error: "Failed to create post", details: format_errors(changeset)})
@@ -51,22 +59,38 @@ defmodule WemachatApiWeb.PostController do
 
   @doc """
   GET /api/v1/posts/feed
-  Get feed for authenticated user (posts from followed users + own posts).
+  Get feed for authenticated user (posts from contacts + own posts).
   """
   def feed(conn, params) do
+    require Logger
+
     user_id = FirebaseAuth.current_user_id(conn)
+    Logger.info("[POSTS FEED] User ID: #{user_id}")
+
     page = parse_int(params["page"], 1)
     per_page = parse_int(params["per_page"], 20)
+    Logger.info("[POSTS FEED] Page: #{page}, Per page: #{per_page}")
 
-    posts = Moments.get_feed(user_id, page: page, per_page: per_page)
+    try do
+      posts = Moments.get_feed(user_id, page: page, per_page: per_page)
+      Logger.info("[POSTS FEED] Found #{length(posts)} posts for user #{user_id}")
 
-    conn
-    |> put_status(:ok)
-    |> json(%{
-      posts: Enum.map(posts, &format_post/1),
-      page: page,
-      per_page: per_page
-    })
+      conn
+      |> put_status(:ok)
+      |> json(%{
+        posts: Enum.map(posts, &format_post/1),
+        page: page,
+        per_page: per_page
+      })
+    rescue
+      e ->
+        Logger.error("[POSTS FEED] Error: #{inspect(e)}")
+        Logger.error("[POSTS FEED] Stacktrace: #{inspect(__STACKTRACE__)}")
+
+        conn
+        |> put_status(:internal_server_error)
+        |> json(%{error: "Failed to load feed", details: inspect(e)})
+    end
   end
 
   @doc """
