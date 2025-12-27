@@ -144,6 +144,18 @@ defmodule WemachatCore.Contexts.Contacts do
     )
   end
 
+  @doc """
+  Get list of contact user IDs for a user (for feed generation).
+  Returns a list of user IDs that are in this user's contacts.
+  """
+  def get_contact_ids(user_id) do
+    from(c in Contact,
+      where: c.user_id == ^user_id,
+      select: c.contact_user_id
+    )
+    |> Repo.all()
+  end
+
   # ==========================================
   # BLOCKING MANAGEMENT
   # ==========================================

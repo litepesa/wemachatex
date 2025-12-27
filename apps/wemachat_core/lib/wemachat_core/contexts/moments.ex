@@ -8,7 +8,7 @@ defmodule WemachatCore.Contexts.Moments do
   import Ecto.Query, warn: false
   alias WemachatDatabase.Repo
   alias WemachatDatabase.Schemas.{Post, PostLike, PostComment}
-  alias WemachatCore.Contexts.Users
+  alias WemachatCore.Contexts.{Users, Contacts}
 
   ## POSTS
 
@@ -55,18 +55,19 @@ defmodule WemachatCore.Contexts.Moments do
   end
 
   @doc """
-  Get feed for a user (posts from users they follow + their own posts).
+  Get feed for a user (posts from their contacts + their own posts).
+  WeChat Moments style - based on contacts (phone book), not follows.
   Ordered by newest first.
   """
   def get_feed(user_id, opts \\ []) do
     page = Keyword.get(opts, :page, 1)
     per_page = Keyword.get(opts, :per_page, 20)
 
-    # Get list of users the current user follows
-    followed_user_ids = Users.get_following_ids(user_id)
+    # Get list of users in the current user's contacts (WeChat style)
+    contact_user_ids = Contacts.get_contact_ids(user_id)
 
     # Include the user's own posts
-    all_user_ids = [user_id | followed_user_ids]
+    all_user_ids = [user_id | contact_user_ids]
 
     Post
     |> where([p], p.user_id in ^all_user_ids and p.is_active == true)
