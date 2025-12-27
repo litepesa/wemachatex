@@ -57,7 +57,21 @@ defmodule WemachatCore.Jobs.VideoCleanup do
   end
 
   defp perform_cleanup do
-    Logger.info("Video cleanup job disabled - videos no longer expire")
-    {:ok, 0}
+    Logger.info("Starting expired video cleanup...")
+
+    case Videos.delete_expired_videos() do
+      {:ok, count} ->
+        if count > 0 do
+          Logger.info("Deleted #{count} expired videos")
+        else
+          Logger.debug("No expired videos to delete")
+        end
+
+        {:ok, count}
+
+      {:error, reason} ->
+        Logger.error("Failed to delete expired videos: #{inspect(reason)}")
+        {:error, reason}
+    end
   end
 end
