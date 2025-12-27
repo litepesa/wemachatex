@@ -136,25 +136,34 @@ defmodule WemachatCore.Contexts.Moments do
   def like_post(user_id, post_id) do
     attrs = %{user_id: user_id, post_id: post_id}
 
-    Repo.transaction(fn ->
-      # Create like
-      like =
-        %PostLike{}
-        |> PostLike.changeset(attrs)
-        |> Repo.insert!()
+    # Check if already liked
+    existing_like = Repo.get_by(PostLike, user_id: user_id, post_id: post_id)
 
-      # Increment post likes count
-      post = get_post!(post_id)
+    if existing_like do
+      # Already liked, return the existing like
+      {:ok, existing_like}
+    else
+      # Create new like
+      Repo.transaction(fn ->
+        # Create like
+        like =
+          %PostLike{}
+          |> PostLike.changeset(attrs)
+          |> Repo.insert!()
 
-      post
-      |> Ecto.Changeset.change(likes_count: post.likes_count + 1)
-      |> Repo.update!()
+        # Increment post likes count
+        post = get_post!(post_id)
 
-      like
-    end)
-    |> case do
-      {:ok, like} -> {:ok, like}
-      {:error, reason} -> {:error, reason}
+        post
+        |> Ecto.Changeset.change(likes_count: post.likes_count + 1)
+        |> Repo.update!()
+
+        like
+      end)
+      |> case do
+        {:ok, like} -> {:ok, like}
+        {:error, reason} -> {:error, reason}
+      end
     end
   end
 
