@@ -76,12 +76,24 @@ defmodule WemachatApiWeb.PostController do
   def feed(conn, params) do
     require Logger
 
-    user_id = FirebaseAuth.current_user_id(conn)
-    Logger.info("[POSTS FEED] User ID: #{user_id}")
+    # Log auth headers for debugging
+    auth_header = Plug.Conn.get_req_header(conn, "authorization")
+    Logger.info("[POSTS FEED] Authorization header present: #{inspect(auth_header != [])}")
+    Logger.info("[POSTS FEED] Authorization header: #{inspect(Enum.at(auth_header, 0, "NONE"))}")
 
-    page = parse_int(params["page"], 1)
-    per_page = parse_int(params["per_page"], 20)
-    Logger.info("[POSTS FEED] Page: #{page}, Per page: #{per_page}")
+    user_id = FirebaseAuth.current_user_id(conn)
+    Logger.info("[POSTS FEED] User ID from conn.assigns: #{inspect(user_id)}")
+
+    if is_nil(user_id) do
+      Logger.error("[POSTS FEED] ❌ USER ID IS NIL! Auth did not work!")
+
+      conn
+      |> put_status(:unauthorized)
+      |> json(%{error: "Authentication required. Please log in."})
+    else
+      page = parse_int(params["page"], 1)
+      per_page = parse_int(params["per_page"], 20)
+      Logger.info("[POSTS FEED] Page: #{page}, Per page: #{per_page}")
 
     try do
       posts = Moments.get_feed(user_id, page: page, per_page: per_page)
@@ -102,6 +114,7 @@ defmodule WemachatApiWeb.PostController do
         conn
         |> put_status(:internal_server_error)
         |> json(%{error: "Failed to load feed", details: inspect(e)})
+    end
     end
   end
 
