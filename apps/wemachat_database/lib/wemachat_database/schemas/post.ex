@@ -30,9 +30,9 @@ defmodule WemachatDatabase.Schemas.Post do
 
     # Privacy
     field :visibility, :string, default: "public"
-    field :visible_to, {:array, :binary_id}, default: []  # Custom whitelist (WeChat-style)
-    field :hidden_from, {:array, :binary_id}, default: [] # Custom blacklist (WeChat-style)
-    field :location, :string                               # Location tag
+    field :visible_to, {:array, :string}, default: []  # Custom whitelist (WeChat-style) - Firebase UIDs
+    field :hidden_from, {:array, :string}, default: [] # Custom blacklist (WeChat-style) - Firebase UIDs
+    field :location, :string                           # Location tag
 
     # Engagement Metrics
     field :likes_count, :integer, default: 0
