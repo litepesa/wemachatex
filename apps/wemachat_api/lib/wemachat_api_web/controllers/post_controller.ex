@@ -349,6 +349,10 @@ defmodule WemachatApiWeb.PostController do
   end
 
   defp format_post(post, current_user_id \\ nil) do
+    # Safely compute fields, return false on any error
+    is_liked = safe_is_liked(post.id, current_user_id)
+    is_mutual = safe_is_mutual_contact(current_user_id, post.user_id)
+
     %{
       # Basic fields (dual format for compatibility)
       id: post.id,
@@ -378,27 +382,11 @@ defmodule WemachatApiWeb.PostController do
       comments_count: post.comments_count,
       sharesCount: post.shares_count,
       shares_count: post.shares_count,
-      # Computed fields (only if current_user_id provided)
-      isLikedByMe:
-        if(current_user_id,
-          do: Moments.is_liked_by_user?(post.id, current_user_id),
-          else: false
-        ),
-      is_liked_by_me:
-        if(current_user_id,
-          do: Moments.is_liked_by_user?(post.id, current_user_id),
-          else: false
-        ),
-      isMutualContact:
-        if(current_user_id && post.user_id != current_user_id,
-          do: Moments.is_mutual_contact?(current_user_id, post.user_id),
-          else: false
-        ),
-      is_mutual_contact:
-        if(current_user_id && post.user_id != current_user_id,
-          do: Moments.is_mutual_contact?(current_user_id, post.user_id),
-          else: false
-        ),
+      # Computed fields (safe execution)
+      isLikedByMe: is_liked,
+      is_liked_by_me: is_liked,
+      isMutualContact: is_mutual,
+      is_mutual_contact: is_mutual,
       # Timestamps
       createdAt: post.inserted_at,
       created_at: post.inserted_at,
@@ -407,6 +395,29 @@ defmodule WemachatApiWeb.PostController do
       isActive: post.is_active,
       is_active: post.is_active
     }
+  end
+
+  # Safe helpers for computed fields
+  defp safe_is_liked(post_id, user_id) when is_nil(user_id), do: false
+
+  defp safe_is_liked(post_id, user_id) do
+    try do
+      Moments.is_liked_by_user?(post_id, user_id)
+    rescue
+      _ -> false
+    end
+  end
+
+  defp safe_is_mutual_contact(user_id, contact_id)
+       when is_nil(user_id) or user_id == contact_id,
+       do: false
+
+  defp safe_is_mutual_contact(user_id, contact_id) do
+    try do
+      Moments.is_mutual_contact?(user_id, contact_id)
+    rescue
+      _ -> false
+    end
   end
 
   defp format_comment(comment) do
