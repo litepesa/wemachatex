@@ -30,6 +30,9 @@ defmodule WemachatDatabase.Schemas.Post do
 
     # Privacy
     field :visibility, :string, default: "public"
+    field :visible_to, {:array, :binary_id}, default: []  # Custom whitelist (WeChat-style)
+    field :hidden_from, {:array, :binary_id}, default: [] # Custom blacklist (WeChat-style)
+    field :location, :string                               # Location tag
 
     # Engagement Metrics
     field :likes_count, :integer, default: 0
@@ -50,7 +53,7 @@ defmodule WemachatDatabase.Schemas.Post do
   """
   def create_changeset(post, attrs) do
     post
-    |> cast(attrs, [:user_id, :user_name, :user_image, :content_text, :media_urls, :media_type, :visibility])
+    |> cast(attrs, [:user_id, :user_name, :user_image, :content_text, :media_urls, :media_type, :visibility, :visible_to, :hidden_from, :location])
     |> validate_required([:user_id, :user_name])
     |> validate_post_content()
     |> validate_visibility()
@@ -63,7 +66,7 @@ defmodule WemachatDatabase.Schemas.Post do
   """
   def update_changeset(post, attrs) do
     post
-    |> cast(attrs, [:content_text, :media_urls, :media_type, :visibility, :is_active])
+    |> cast(attrs, [:content_text, :media_urls, :media_type, :visibility, :visible_to, :hidden_from, :location, :is_active])
     |> validate_post_content()
     |> validate_visibility()
     |> validate_media_type()

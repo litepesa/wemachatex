@@ -14,11 +14,41 @@ defmodule WemachatCore.Contexts.Moments do
 
   @doc """
   Create a post.
+  SECURITY: Fetches user info server-side to prevent impersonation.
   """
   def create_post(attrs \\ %{}) do
-    %Post{}
-    |> Post.create_changeset(attrs)
-    |> Repo.insert()
+    require Logger
+
+    user_id = attrs["user_id"]
+    Logger.info("[MOMENTS] Creating post for user_id: #{user_id}")
+
+    # Fetch user info from database (don't trust client-provided user info)
+    case Users.get_user(user_id) do
+      nil ->
+        Logger.error("[MOMENTS] User not found: #{user_id}")
+        {:error, :user_not_found}
+
+      user ->
+        Logger.info("[MOMENTS] Found user: #{user.name} (#{user.id})")
+
+        # Validate user has required fields
+        if is_nil(user.name) or user.name == "" do
+          Logger.error("[MOMENTS] User has no name: #{user_id}")
+          {:error, :user_name_missing}
+        else
+          # Add server-fetched user info to attrs
+          attrs =
+            attrs
+            |> Map.put("user_name", user.name)
+            |> Map.put("user_image", user.profile_image)
+
+          Logger.info("[MOMENTS] Creating post with user_name: #{user.name}")
+
+          %Post{}
+          |> Post.create_changeset(attrs)
+          |> Repo.insert()
+        end
+    end
   end
 
   @doc """
@@ -57,6 +87,7 @@ defmodule WemachatCore.Contexts.Moments do
   @doc """
   Get feed for a user (posts from their contacts + their own posts).
   WeChat Moments style - based on contacts (phone book), not follows.
+  Respects advanced privacy controls (visible_to, hidden_from).
   Ordered by newest first.
   """
   def get_feed(user_id, opts \\ []) do
@@ -71,10 +102,22 @@ defmodule WemachatCore.Contexts.Moments do
 
     Post
     |> where([p], p.user_id in ^all_user_ids and p.is_active == true)
-    |> where([p], p.visibility in ["public", "friends"])
+    # Privacy logic with WeChat-style controls
+    |> where([p], ^user_id not in p.hidden_from)  # Not in blacklist
+    |> where(
+      [p],
+      # Public posts: visible to all
+      fragment("? = 'public'", p.visibility) or
+        # Friends posts: visible to contacts
+        fragment("? = 'friends'", p.visibility) or
+        # Private posts: only visible if user is in whitelist OR it's their own post
+        (fragment("? = 'private'", p.visibility) and
+           (^user_id in p.visible_to or p.user_id == ^user_id))
+    )
     |> order_by([p], desc: p.inserted_at)
     |> limit(^per_page)
     |> offset(^((page - 1) * per_page))
+    |> preload([:likes, :comments])  # Preload for computed fields
     |> Repo.all()
   end
 
@@ -293,6 +336,27 @@ defmodule WemachatCore.Contexts.Moments do
       {:ok, comment} -> {:ok, comment}
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  ## HELPER FUNCTIONS FOR COMPUTED FIELDS
+
+  @doc """
+  Check if a specific user has liked a post.
+  Used for computed field isLikedByMe in response.
+  """
+  def is_liked_by_user?(post_id, user_id) do
+    from(l in PostLike,
+      where: l.post_id == ^post_id and l.user_id == ^user_id
+    )
+    |> Repo.exists?()
+  end
+
+  @doc """
+  Check if two users are mutual contacts.
+  Used for computed field isMutualContact in response.
+  """
+  def is_mutual_contact?(user_id, contact_id) do
+    Contacts.is_mutual_contact?(user_id, contact_id)
   end
 
   ## STATISTICS

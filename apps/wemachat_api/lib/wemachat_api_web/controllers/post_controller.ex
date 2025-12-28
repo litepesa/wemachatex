@@ -28,7 +28,19 @@ defmodule WemachatApiWeb.PostController do
         Logger.info("[POST CREATE] Success! Post ID: #{post.id}")
         conn
         |> put_status(:created)
-        |> json(format_post(post))
+        |> json(format_post(post, user_id))
+
+      {:error, :user_not_found} ->
+        Logger.error("[POST CREATE] User not found: #{user_id}")
+        conn
+        |> put_status(:not_found)
+        |> json(%{error: "User not found. Please sync your profile."})
+
+      {:error, :user_name_missing} ->
+        Logger.error("[POST CREATE] User has no name: #{user_id}")
+        conn
+        |> put_status(:bad_request)
+        |> json(%{error: "User profile incomplete. Please update your name in settings."})
 
       {:error, changeset} ->
         Logger.error("[POST CREATE] Failed! Changeset errors: #{inspect(changeset.errors)}")
@@ -78,7 +90,7 @@ defmodule WemachatApiWeb.PostController do
       conn
       |> put_status(:ok)
       |> json(%{
-        posts: Enum.map(posts, &format_post/1),
+        posts: Enum.map(posts, &format_post(&1, user_id)),
         page: page,
         per_page: per_page
       })
@@ -277,10 +289,15 @@ defmodule WemachatApiWeb.PostController do
   def create_comment(conn, %{"id" => post_id} = params) do
     user_id = FirebaseAuth.current_user_id(conn)
 
-    attrs =
-      params
-      |> Map.put("post_id", post_id)
-      |> Map.put("user_id", user_id)
+    # Transform camelCase → snake_case for comment fields
+    attrs = %{
+      "post_id" => post_id,
+      "user_id" => user_id,
+      "comment_text" => params["commentText"] || params["comment_text"],
+      "reply_to_user_id" => params["replyToUserId"] || params["reply_to_user_id"]
+    }
+    |> Enum.reject(fn {_k, v} -> is_nil(v) end)
+    |> Enum.into(%{})
 
     case Moments.create_comment(attrs) do
       {:ok, comment} ->
@@ -319,19 +336,21 @@ defmodule WemachatApiWeb.PostController do
   defp transform_post_params(params) do
     %{
       "user_id" => params["userId"] || params["user_id"],
-      "user_name" => params["userName"] || params["user_name"],
-      "user_image" => params["userImage"] || params["user_image"],
       "content_text" => params["contentText"] || params["content_text"],
       "media_urls" => params["mediaUrls"] || params["media_urls"] || [],
       "media_type" => params["mediaType"] || params["media_type"],
-      "visibility" => params["visibility"] || "public"
+      "visibility" => params["visibility"] || "public",
+      "visible_to" => params["visibleTo"] || params["visible_to"] || [],
+      "hidden_from" => params["hiddenFrom"] || params["hidden_from"] || [],
+      "location" => params["location"]
     }
     |> Enum.reject(fn {_k, v} -> is_nil(v) end)
     |> Enum.into(%{})
   end
 
-  defp format_post(post) do
+  defp format_post(post, current_user_id \\ nil) do
     %{
+      # Basic fields (dual format for compatibility)
       id: post.id,
       userId: post.user_id,
       user_id: post.user_id,
@@ -346,18 +365,47 @@ defmodule WemachatApiWeb.PostController do
       mediaType: post.media_type,
       media_type: post.media_type,
       visibility: post.visibility,
+      location: post.location,
+      # Privacy fields (dual format)
+      visibleTo: post.visible_to || [],
+      visible_to: post.visible_to || [],
+      hiddenFrom: post.hidden_from || [],
+      hidden_from: post.hidden_from || [],
+      # Counts
       likesCount: post.likes_count,
       likes_count: post.likes_count,
       commentsCount: post.comments_count,
       comments_count: post.comments_count,
       sharesCount: post.shares_count,
       shares_count: post.shares_count,
-      isActive: post.is_active,
-      is_active: post.is_active,
+      # Computed fields (only if current_user_id provided)
+      isLikedByMe:
+        if(current_user_id,
+          do: Moments.is_liked_by_user?(post.id, current_user_id),
+          else: false
+        ),
+      is_liked_by_me:
+        if(current_user_id,
+          do: Moments.is_liked_by_user?(post.id, current_user_id),
+          else: false
+        ),
+      isMutualContact:
+        if(current_user_id && post.user_id != current_user_id,
+          do: Moments.is_mutual_contact?(current_user_id, post.user_id),
+          else: false
+        ),
+      is_mutual_contact:
+        if(current_user_id && post.user_id != current_user_id,
+          do: Moments.is_mutual_contact?(current_user_id, post.user_id),
+          else: false
+        ),
+      # Timestamps
       createdAt: post.inserted_at,
       created_at: post.inserted_at,
       updatedAt: post.updated_at,
-      updated_at: post.updated_at
+      updated_at: post.updated_at,
+      isActive: post.is_active,
+      is_active: post.is_active
     }
   end
 
@@ -370,6 +418,8 @@ defmodule WemachatApiWeb.PostController do
       user_id: comment.user_id,
       commentText: comment.comment_text,
       comment_text: comment.comment_text,
+      replyToUserId: comment.reply_to_user_id,
+      reply_to_user_id: comment.reply_to_user_id,
       mediaUrl: comment.media_url,
       media_url: comment.media_url,
       isDeleted: comment.is_deleted,

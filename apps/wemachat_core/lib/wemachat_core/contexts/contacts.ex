@@ -156,6 +156,15 @@ defmodule WemachatCore.Contexts.Contacts do
     |> Repo.all()
   end
 
+  @doc """
+  Check if two users are mutual contacts (both have each other in contacts).
+  Used for privacy controls and computed fields.
+  """
+  def is_mutual_contact?(user_id, contact_id) do
+    # Check if user A has user B in contacts AND user B has user A in contacts
+    is_contact?(user_id, contact_id) and is_contact?(contact_id, user_id)
+  end
+
   # ==========================================
   # BLOCKING MANAGEMENT
   # ==========================================
