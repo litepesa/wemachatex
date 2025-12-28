@@ -121,16 +121,18 @@ defmodule WemachatApiWeb.Router do
     post "/statuses/:id/like", StatusController, :like
     delete "/statuses/:id/unlike", StatusController, :unlike
 
-    # Post routes (public)
+    # Post routes (public - specific paths MUST come before :id patterns)
     get "/posts/discover", PostController, :discover
     get "/posts/search", PostController, :search
-    get "/posts/:id", PostController, :show
-    get "/posts/:id/comments", PostController, :comments
     get "/users/:user_id/posts", PostController, :user_posts
 
-    # Post routes (authenticated)
+    # Post routes (authenticated - specific paths before :id)
     get "/posts/feed", PostController, :feed
     post "/posts", PostController, :create
+
+    # Post routes with :id param (MUST be after specific paths like /feed, /discover)
+    get "/posts/:id", PostController, :show
+    get "/posts/:id/comments", PostController, :comments
     put "/posts/:id", PostController, :update
     delete "/posts/:id", PostController, :delete
     post "/posts/:id/like", PostController, :like
