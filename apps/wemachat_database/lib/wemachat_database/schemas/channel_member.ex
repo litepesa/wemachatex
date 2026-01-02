@@ -1,8 +1,9 @@
 defmodule WemachatDatabase.Schemas.ChannelMember do
   @moduledoc """
-  Schema for channel team members (admins and moderators).
-  Each channel can have up to 8 total members (admins + moderators).
+  Schema for channel team members (admins only).
+  Each channel can have up to 8 admins.
   The owner is not counted in this table - owner is tracked in channels.owner_id.
+  Regular members/subscribers are tracked in channel_subscriptions table.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -14,7 +15,7 @@ defmodule WemachatDatabase.Schemas.ChannelMember do
 
   @derive {Jason.Encoder, except: [:__meta__, :channel]}
 
-  @role_values ~w(admin moderator)a
+  @role_values ~w(admin)a
   @max_members_per_channel 8
 
   schema "channel_members" do

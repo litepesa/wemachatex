@@ -95,6 +95,10 @@ defmodule WemachatApiWeb.ChannelController do
         is_owner = Channels.is_channel_owner?(channel.id, user_id)
         is_member = Channels.is_channel_member?(channel.id, user_id)
 
+        # Get member role to determine admin status (only admin role exists, no moderator)
+        member = Channels.get_channel_member(channel.id, user_id)
+        is_admin = member && member.role == :admin
+
         subscription = Channels.get_subscription(channel.id, user_id)
 
         conn
@@ -105,6 +109,8 @@ defmodule WemachatApiWeb.ChannelController do
           is_subscribed: is_subscribed,
           isOwner: is_owner,
           is_owner: is_owner,
+          isAdmin: is_admin,
+          is_admin: is_admin,
           isMember: is_member,
           is_member: is_member,
           unreadCount: if(subscription, do: subscription.unread_count, else: 0),
