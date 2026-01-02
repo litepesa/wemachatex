@@ -30,6 +30,9 @@ defmodule WemachatDatabase.Schemas.User do
     field :is_admin, :boolean, default: false
     field :is_moderator, :boolean, default: false
 
+    # Business/Commerce Role
+    field :is_seller, :boolean, default: false
+
     # Restriction Fields (Bans)
     field :can_comment, :boolean, default: true
     field :can_post, :boolean, default: true
@@ -160,6 +163,7 @@ defmodule WemachatDatabase.Schemas.User do
       :is_featured,
       :is_admin,
       :is_moderator,
+      :is_seller,
       :can_comment,
       :can_post,
       :is_active
@@ -169,6 +173,7 @@ defmodule WemachatDatabase.Schemas.User do
       :is_featured,
       :is_admin,
       :is_moderator,
+      :is_seller,
       :can_comment,
       :can_post,
       :is_active
