@@ -292,12 +292,26 @@ defmodule WemachatApiWeb.ChannelPostController do
   ## PRIVATE HELPERS
 
   defp format_post(post, is_unlocked) do
+    # Get author and channel info if preloaded
+    author_name = if Ecto.assoc_loaded?(post.channel) and post.channel, do: nil, else: nil
+    author_avatar_url = nil
+    channel_name = if Ecto.assoc_loaded?(post.channel) and post.channel, do: post.channel.name, else: nil
+    channel_avatar_url = if Ecto.assoc_loaded?(post.channel) and post.channel, do: post.channel.avatar_url, else: nil
+
     base_format = %{
       id: post.id,
       channelId: post.channel_id,
       channel_id: post.channel_id,
+      channelName: channel_name,
+      channel_name: channel_name,
+      channelAvatarUrl: channel_avatar_url,
+      channel_avatar_url: channel_avatar_url,
       authorId: post.author_id,
       author_id: post.author_id,
+      authorName: author_name,
+      author_name: author_name,
+      authorAvatarUrl: author_avatar_url,
+      author_avatar_url: author_avatar_url,
       contentType: post.content_type,
       content_type: post.content_type,
       text: post.text,

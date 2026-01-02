@@ -187,9 +187,17 @@ defmodule WemachatCore.Contexts.Channels do
   Create a new post in a channel.
   """
   def create_post(attrs) do
-    %ChannelPost{}
-    |> ChannelPost.create_changeset(attrs)
-    |> Repo.insert()
+    case %ChannelPost{}
+         |> ChannelPost.create_changeset(attrs)
+         |> Repo.insert() do
+      {:ok, post} ->
+        # Preload channel for complete data
+        post = post |> Repo.preload(:channel)
+        {:ok, post}
+
+      error ->
+        error
+    end
   end
 
   @doc """
