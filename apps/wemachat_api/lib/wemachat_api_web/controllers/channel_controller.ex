@@ -12,6 +12,22 @@ defmodule WemachatApiWeb.ChannelController do
   ## CHANNEL CRUD
 
   @doc """
+  GET /api/v1/channels/check-name?name=MyChannel
+  Check if a channel name is available.
+  """
+  def check_name(conn, %{"name" => name}) do
+    is_available = Channels.is_channel_name_available?(name)
+
+    conn
+    |> put_status(:ok)
+    |> json(%{
+      available: is_available,
+      name: String.trim(name),
+      message: if(is_available, do: "This name is available", else: "This name is already taken")
+    })
+  end
+
+  @doc """
   GET /api/v1/channels
   List channels with optional filters: ?type=public&page=1&per_page=20&search=query
   """
@@ -100,7 +116,7 @@ defmodule WemachatApiWeb.ChannelController do
   @doc """
   POST /api/v1/channels
   Create a new channel.
-  Body: {name, description, type, subscriptionPriceCoins?, avatarUrl?}
+  Body: {name, description, type, subscriptionPriceCoins?, avatarUrl?, bannerUrl?}
   """
   def create(conn, params) do
     user_id = FirebaseAuth.current_user_id(conn)
@@ -111,7 +127,8 @@ defmodule WemachatApiWeb.ChannelController do
       "owner_id" => user_id,
       "type" => params["type"] || "public",
       "subscription_price_coins" => params["subscriptionPriceCoins"] || params["subscription_price_coins"],
-      "avatar_url" => params["avatarUrl"] || params["avatar_url"]
+      "avatar_url" => params["avatarUrl"] || params["avatar_url"],
+      "banner_url" => params["bannerUrl"] || params["banner_url"]
     }
 
     case Channels.create_channel(attrs) do
@@ -130,7 +147,7 @@ defmodule WemachatApiWeb.ChannelController do
   @doc """
   PUT /api/v1/channels/:id
   Update channel information (owner only).
-  Body: {name?, description?, avatarUrl?}
+  Body: {name?, description?, avatarUrl?, bannerUrl?}
   """
   def update(conn, %{"id" => id} = params) do
     user_id = FirebaseAuth.current_user_id(conn)
@@ -140,7 +157,8 @@ defmodule WemachatApiWeb.ChannelController do
       attrs = %{
         "name" => params["name"],
         "description" => params["description"],
-        "avatar_url" => params["avatarUrl"] || params["avatar_url"]
+        "avatar_url" => params["avatarUrl"] || params["avatar_url"],
+        "banner_url" => params["bannerUrl"] || params["banner_url"]
       }
 
       case Channels.update_channel(channel, attrs) do
@@ -420,6 +438,8 @@ defmodule WemachatApiWeb.ChannelController do
       post_count: channel.post_count,
       avatarUrl: channel.avatar_url,
       avatar_url: channel.avatar_url,
+      bannerUrl: channel.banner_url,
+      banner_url: channel.banner_url,
       createdAt: channel.inserted_at,
       created_at: channel.inserted_at,
       updatedAt: channel.updated_at,

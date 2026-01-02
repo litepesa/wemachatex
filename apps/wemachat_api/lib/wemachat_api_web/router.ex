@@ -197,6 +197,7 @@ defmodule WemachatApiWeb.Router do
     # Public - discovery
     get "/channels", ChannelController, :index
     get "/channels/trending", ChannelController, :trending
+    get "/channels/check-name", ChannelController, :check_name
     get "/channels/:id", ChannelController, :show
 
     # Authenticated - management

@@ -25,6 +25,7 @@ defmodule WemachatDatabase.Schemas.Channel do
     field :subscriber_count, :integer, default: 0
     field :post_count, :integer, default: 0
     field :avatar_url, :string
+    field :banner_url, :string
 
     has_many :posts, ChannelPost, foreign_key: :channel_id
     has_many :members, ChannelMember, foreign_key: :channel_id
@@ -44,14 +45,15 @@ defmodule WemachatDatabase.Schemas.Channel do
       :owner_id,
       :type,
       :subscription_price_coins,
-      :avatar_url
+      :avatar_url,
+      :banner_url
     ])
     |> validate_required([:name, :description, :owner_id, :type])
     |> validate_length(:name, min: 3, max: 50)
     |> validate_length(:description, min: 10, max: 500)
     |> validate_inclusion(:type, @type_values)
     |> validate_premium_pricing()
-    |> unique_constraint(:name)
+    |> unique_constraint(:name, message: "This channel name is already taken. Please choose a different name.")
   end
 
   @doc """
@@ -59,10 +61,10 @@ defmodule WemachatDatabase.Schemas.Channel do
   """
   def update_changeset(channel, attrs) do
     channel
-    |> cast(attrs, [:name, :description, :avatar_url, :is_verified])
+    |> cast(attrs, [:name, :description, :avatar_url, :banner_url, :is_verified])
     |> validate_length(:name, min: 3, max: 50)
     |> validate_length(:description, min: 10, max: 500)
-    |> unique_constraint(:name)
+    |> unique_constraint(:name, message: "This channel name is already taken. Please choose a different name.")
   end
 
   @doc """

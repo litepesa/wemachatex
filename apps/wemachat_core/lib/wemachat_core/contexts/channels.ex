@@ -91,6 +91,21 @@ defmodule WemachatCore.Contexts.Channels do
   def get_channel_by_name(name), do: Repo.get_by(Channel, name: name)
 
   @doc """
+  Check if a channel name is available.
+  Returns true if available, false if taken.
+  """
+  def is_channel_name_available?(name) do
+    name
+    |> String.trim()
+    |> then(fn trimmed_name ->
+      case Repo.get_by(Channel, name: trimmed_name) do
+        nil -> true
+        _ -> false
+      end
+    end)
+  end
+
+  @doc """
   Create a new channel.
   """
   def create_channel(attrs) do

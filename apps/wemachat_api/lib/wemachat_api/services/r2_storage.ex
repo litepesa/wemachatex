@@ -97,14 +97,17 @@ defmodule WemachatApi.Services.R2Storage do
   Generate a storage key for a file.
 
   ## Parameters
-    - type: File type ("video", "thumbnail", "profile", "post", "marketplace", etc.)
+    - type: File type ("video", "thumbnail", "profile", "post", "marketplace", "channel_avatar", "status", "moment", etc.)
     - user_id: User ID
     - filename: Filename
 
   ## Returns
-    - Storage key (e.g., "videos/user123/filename.mp4", "marketplace/user123/filename.mp4")
+    - Storage key (e.g., "videos/user123/filename.mp4", "channels/user123/filename.jpg")
   """
-  def generate_key(type, user_id, filename) when type in ["video", "thumbnail", "profile", "post", "comment", "marketplace"] do
+  def generate_key(type, user_id, filename) when type in [
+    "video", "thumbnail", "profile", "post", "comment",
+    "marketplace", "channel_avatar", "status", "moment"
+  ] do
     case type do
       "video" -> "videos/#{user_id}/#{filename}"
       "thumbnail" -> "thumbnails/#{user_id}/#{filename}"
@@ -112,6 +115,9 @@ defmodule WemachatApi.Services.R2Storage do
       "post" -> "posts/#{user_id}/#{filename}"
       "comment" -> "comments/#{user_id}/#{filename}"
       "marketplace" -> "marketplace/#{user_id}/#{filename}"
+      "channel_avatar" -> "channels/#{user_id}/#{filename}"
+      "status" -> "status/#{user_id}/#{filename}"
+      "moment" -> "moments/#{user_id}/#{filename}"
       _ -> "uploads/#{user_id}/#{filename}"
     end
   end
