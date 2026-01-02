@@ -13,11 +13,11 @@ defmodule WemachatApiWeb.UploadController do
 
   Accepts multipart form data with:
   - file: The file to upload
-  - type: File type ("video", "thumbnail", "profile", "post", "comment", "marketplace", "channel_avatar", "status", "moment")
+  - type: File type ("video", "thumbnail", "profile", "post", "comment", "marketplace", "channel_avatar", "channel_post", "status", "moment")
   """
   def create(conn, %{"file" => file, "type" => type}) when type in [
     "video", "thumbnail", "profile", "post", "comment",
-    "marketplace", "channel_avatar", "status", "moment"
+    "marketplace", "channel_avatar", "channel_post", "status", "moment"
   ] do
     user_id = FirebaseAuth.current_user_id(conn)
 
@@ -51,7 +51,7 @@ defmodule WemachatApiWeb.UploadController do
   def create(conn, %{"file" => _file}) do
     conn
     |> put_status(:bad_request)
-    |> json(%{error: "Missing required parameter: type (video, thumbnail, profile, post, comment, marketplace, channel_avatar, status, moment)"})
+    |> json(%{error: "Missing required parameter: type (video, thumbnail, profile, post, comment, marketplace, channel_avatar, channel_post, status, moment)"})
   end
 
   def create(conn, _params) do
@@ -70,7 +70,7 @@ defmodule WemachatApiWeb.UploadController do
   """
   def create_multiple(conn, %{"files" => files, "type" => type}) when is_list(files) and type in [
     "video", "thumbnail", "profile", "post", "comment",
-    "marketplace", "channel_avatar", "status", "moment"
+    "marketplace", "channel_avatar", "channel_post", "status", "moment"
   ] do
     user_id = FirebaseAuth.current_user_id(conn)
 
