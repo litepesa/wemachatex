@@ -95,14 +95,17 @@ defmodule WemachatCore.Contexts.Channels do
   Returns true if available, false if taken.
   """
   def is_channel_name_available?(name) do
-    name
-    |> String.trim()
-    |> then(fn trimmed_name ->
-      case Repo.get_by(Channel, name: trimmed_name) do
-        nil -> true
-        _ -> false
-      end
-    end)
+    trimmed_name = String.trim(name)
+
+    # Case-insensitive check using LOWER() to match database unique index
+    query =
+      from c in Channel,
+      where: fragment("LOWER(?)", c.name) == fragment("LOWER(?)", ^trimmed_name)
+
+    case Repo.one(query) do
+      nil -> true
+      _ -> false
+    end
   end
 
   @doc """
